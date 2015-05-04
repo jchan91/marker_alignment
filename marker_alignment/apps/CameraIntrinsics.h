@@ -53,9 +53,9 @@ namespace G2D
             update_internal();
         }
 
-        virtual bool Project(double* uv, const double* xy) const = 0;
-
-        virtual bool Unproject(double* xy, const double* uv) const = 0;
+//        virtual bool Project(double* uv, const double* xy) const = 0;
+//
+//        virtual bool Unproject(double* xy, const double* uv) const = 0;
 
     protected:
         virtual void update_internal() = 0;
@@ -75,14 +75,15 @@ namespace G2D
 
         static const size_t NUM_PARAMS = 4;
 
-        bool Project(double* uv, const double* xy) const
+        template <typename T>
+        bool Project(T* uv, const T* xy) const
         {
             uv[0] = (xy[0] * m_params[FX]) + m_params[PX];
             uv[1] = (xy[1] * m_params[FY]) + m_params[PY];
 
             // TODO: Should this check really be here...
-            int uv_pixel[2] = { static_cast<int>(uv[0] * m_width), static_cast<int>(uv[1] * m_height) };
-            if (uv_pixel[0] < 0 || uv_pixel[0] >= m_width || uv_pixel[1] < 0 || uv_pixel[1] >= m_height)
+            T uv_pixel[2] = { uv[0] * (T)m_width, uv[1] * (T)m_height };
+            if (uv_pixel[0] < 0.0 || uv_pixel[0] >= (T)m_width || uv_pixel[1] < 0.0 || uv_pixel[1] >= (T)m_height)
             {
                 return false;
             }
@@ -90,7 +91,8 @@ namespace G2D
             return true;
         }
 
-        bool Unproject(double* xy, const double* uv) const
+        template <typename T>
+        bool Unproject(T* xy, const T* uv) const
         {
             xy[0] = (uv[0] - m_params[PX]) * m_inv_f[0];
             xy[1] = (uv[1] - m_params[PY]) * m_inv_f[1];

@@ -38,7 +38,6 @@ namespace G2D {
   typedef Eigen::Matrix<double, 7, 1, Eigen::ColMajor>                  Vector7d;
   typedef Eigen::Transform<double,3,Eigen::Isometry,Eigen::ColMajor>    Isometry3D;
 
-  template<typename T>
   class SE3Quat {
     public:
       EIGEN_MAKE_ALIGNED_OPERATOR_NEW;

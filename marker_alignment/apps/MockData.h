@@ -80,11 +80,12 @@ namespace G2D
             }
         }
 
+        template <typename ProjModel>
         void Observations(
                 std::vector<LidarObservation> &obs,
                 const std::vector<LidarMarker> &markers,
                 const std::vector<FramePose> &poses,
-                const CameraIntrinsics* pIntrinsics,
+                const ProjModel* pIntrinsics,
                 void* /*pNoiseModel*/)
         {
             size_t width = pIntrinsics->Width();
@@ -122,7 +123,8 @@ namespace G2D
             }
         }
 
-        void CameraModel(CameraIntrinsics** ppIntrinsics)
+        template <typename ProjModel>
+        void CameraModel(ProjModel** ppIntrinsics)
         {
             if (nullptr == ppIntrinsics)
             {
