@@ -29,6 +29,8 @@ using namespace G2D;
 using namespace std;
 using namespace Eigen;
 
+#define DEBUG 1
+
 // A templated cost functor that implements the residual r = 10 -
 // x. The method operator() is templated so that we can then use an
 // automatic differentiation wrapper around it to generate its
@@ -76,24 +78,37 @@ struct LidarReprojectionError
     LidarReprojectionError(
         Eigen::Vector2d observedMarker,
         Eigen::Vector3d lidarMarker,
-        std::shared_ptr<G2D::SE3Quat> pPose,
+        std::shared_ptr<G2D::SE3Quat> pRig2World,
         const ProjModel* pIntrinsics) :
             m_observedMarker(observedMarker),
             m_lidarMarker(lidarMarker),
-            m_pPose(pPose),
+            m_pRig2World(pRig2World),
             m_pIntrinsics(pIntrinsics)
     {
-        Eigen::Quaterniond pose_q = m_pPose->rotation();
-        m_pose_q[0] = pose_q.w();
-        m_pose_q[1] = pose_q.x();
-        m_pose_q[2] = pose_q.y();
-        m_pose_q[3] = pose_q.z();
-        m_pose_t = m_pPose->translation();
+        G2D::SE3Quat w2r = m_pRig2World->inverse();
+        Eigen::Quaterniond pose_q = w2r.rotation();
+        m_world2rig_q[0] = pose_q.w();
+        m_world2rig_q[1] = pose_q.x();
+        m_world2rig_q[2] = pose_q.y();
+        m_world2rig_q[3] = pose_q.z();
+        m_world2rig_t = w2r.translation();
     }
 
     template <typename T>
     bool operator() (const T* lidar2world_q, const T* lidar2world_t, T* residuals) const
     {
+#ifdef DEBUG
+        Eigen::Matrix<T,4,1> l2w_q;
+        l2w_q[0] = lidar2world_q[0];
+        l2w_q[1] = lidar2world_q[1];
+        l2w_q[2] = lidar2world_q[2];
+        l2w_q[3] = lidar2world_q[3];
+
+        Eigen::Matrix<T,3,1> l2w_t;
+        l2w_t[0] = lidar2world_t[0];
+        l2w_t[1] = lidar2world_t[1];
+        l2w_t[2] = lidar2world_t[2];
+#endif
         // Transform into the world space
         T lidarMarker_world[3];
         Eigen::Matrix<T,3,1> lidarMarker = m_lidarMarker.cast<T>();
@@ -102,10 +117,10 @@ struct LidarReprojectionError
 
         // Transform into the camera
         T lidarMarker_camera[3];
-        Eigen::Matrix<T,4,1> pose_q = m_pose_q.cast<T>();
-        Eigen::Matrix<T,3,1> pose_t = m_pose_t.cast<T>();
-        ceres::QuaternionRotatePoint(pose_q.data(), lidarMarker_world, lidarMarker_camera);
-        for (int i = 0; i < 3; i++) lidarMarker_camera[i] += pose_t[i];
+        Eigen::Matrix<T,4,1> w2r_q = m_world2rig_q.cast<T>();
+        Eigen::Matrix<T,3,1> w2r_t = m_world2rig_t.cast<T>();
+        ceres::QuaternionRotatePoint(w2r_q.data(), lidarMarker_world, lidarMarker_camera);
+        for (int i = 0; i < 3; i++) lidarMarker_camera[i] += w2r_t[i];
 
         T uv[2];
         T xy[2];
@@ -133,15 +148,19 @@ struct LidarReprojectionError
         residuals[0] = m_observedMarker_t.data()[0] - pixel[0];
         residuals[1] = m_observedMarker_t.data()[1] - pixel[1];
 
+#ifdef DEBUG
+        Eigen::Matrix<T, 2, 1> residuals_debug(residuals);
+#endif
+
         return true;
     }
 
 private:
     Eigen::Vector2d m_observedMarker;
     Eigen::Vector3d m_lidarMarker;
-    std::shared_ptr<G2D::SE3Quat> m_pPose;
-    Eigen::Vector4d m_pose_q;
-    Eigen::Vector3d m_pose_t;
+    std::shared_ptr<G2D::SE3Quat> m_pRig2World;
+    Eigen::Vector4d m_world2rig_q;
+    Eigen::Vector3d m_world2rig_t;
     const ProjModel* m_pIntrinsics;
 };
 
@@ -204,24 +223,27 @@ void GetMockData(
 }
 
 template <typename ProjModel>
-void GetMockCameraIntrinsics(std::shared_ptr<ProjModel> pIntrinsics)
+void CreateMockCameraIntrinsics(ProjModel** ppIntrinsics)
 {
     MockData dataProvider;
-    ProjModel* pModel = nullptr;
-    dataProvider.CameraModel<ProjModel>(&pModel);
-    pIntrinsics.reset(pModel);
+    dataProvider.CameraModel<ProjModel>(ppIntrinsics);
 }
 
-int main(int /*argc*/, char** /*argv[]*/)
+int main(int /*argc*/, char** argv)
 {
+    google::InitGoogleLogging(argv[0]);
+
     vector<LidarObservation> observations;
     vector<LidarMarker> lidarMarkers;
     vector<FramePose> poses;
-    shared_ptr<LinearCameraIntrinsics> pIntrinsics;
+    shared_ptr<LinearCameraIntrinsics> spIntrinsics;
     SE3Quat gt_solution;
 
     // Get the sensor data
-    GetMockData<LinearCameraIntrinsics>(observations, lidarMarkers, poses, gt_solution, pIntrinsics.get());
+    LinearCameraIntrinsics* pIntrinsics = nullptr;
+    CreateMockCameraIntrinsics<LinearCameraIntrinsics>(&pIntrinsics);
+    spIntrinsics.reset(pIntrinsics);
+    GetMockData<LinearCameraIntrinsics>(observations, lidarMarkers, poses, gt_solution, spIntrinsics.get());
 
     // Setup dictionaries to look up poses/lidar markers by ids
     std::map<int, LidarMarker> lidarMarkers_dict;
@@ -237,10 +259,19 @@ int main(int /*argc*/, char** /*argv[]*/)
         poses_dict[p.frame_id] = p;
     }
 
+    // Setup the initial guess
+    SE3Quat solution_init_guess;
+    Eigen::Quaterniond solution_init_guess_q = solution_init_guess.rotation();
+    Eigen::Vector3d solution_init_guess_t = solution_init_guess.translation();
+    Eigen::Vector3d solution_t = solution_init_guess_t;
+    Eigen::Vector4d solution_r;
+    solution_r[0] = solution_init_guess_q.w();
+    solution_r[1] = solution_init_guess_q.x();
+    solution_r[2] = solution_init_guess_q.y();
+    solution_r[3] = solution_init_guess_q.z();
+
     // Setup the solver
     // Add a residual block for every pose that has an observation
-    Eigen::Vector3d solution_t;
-    Eigen::Vector4d solution_r;
     ceres::Problem problem;
 
     ceres::LocalParameterization* quat_plus = new ceres::AutoDiffLocalParameterization<QuaternionPlus, 4, 3>;
@@ -255,7 +286,7 @@ int main(int /*argc*/, char** /*argv[]*/)
                         obs.uv,
                         lidarMarkers_dict[obs.marker_id].pos,
                         poses_dict[obs.frame_id].pose,
-                        pIntrinsics.get()));
+                        spIntrinsics.get()));
         problem.AddResidualBlock(cost_function, NULL, solution_r.data(), solution_t.data());
         problem.SetParameterization(solution_r.data(), quat_plus);
     }
@@ -264,6 +295,14 @@ int main(int /*argc*/, char** /*argv[]*/)
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_QR;
     options.minimizer_progress_to_stdout = true;
+
+    // Initialized residuals/jacobians
+    ceres::Problem::EvaluateOptions evaluateOptions;
+    double cost;
+    vector<double> residuals;
+    problem.Evaluate(evaluateOptions, &cost, &residuals, NULL, NULL);
+
+    // Optimize away!
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
 

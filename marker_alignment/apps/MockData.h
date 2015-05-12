@@ -50,6 +50,7 @@ namespace G2D
             points.push_back({ 4, Eigen::Vector3d(1.0, 0.0, -1.0) });
         }
 
+        // Produces poses which are transforms from the Rig to the World
         void Trajectory_Circle(std::vector<FramePose> &poses, const int numPoses, const uint32_t radius)
         {
             // "Walk" in a circle around the markers, at radius
@@ -143,7 +144,7 @@ namespace G2D
         void Solution(SE3Quat &lidar2rig)
         {
             double angle = 0;
-            Eigen::Vector3d translation(1.0, 0.0, 0.0);
+            Eigen::Vector3d translation(0.0, 0.0, 0.0);
             Eigen::Quaterniond q(Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitY()));
 
             lidar2rig.setRotation(q);
