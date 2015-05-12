@@ -20,6 +20,7 @@ ADD_EXECUTABLE(marker_alignment
   se3_ops.h
   se3_ops.hpp
   math_constants.h
+  MarkerAlignmentProblem.h
   main.cpp
 )
 
