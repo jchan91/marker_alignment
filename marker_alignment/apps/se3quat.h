@@ -38,6 +38,39 @@ namespace G2D {
   typedef Eigen::Matrix<double, 7, 1, Eigen::ColMajor>                  Vector7d;
   typedef Eigen::Transform<double,3,Eigen::Isometry,Eigen::ColMajor>    Isometry3D;
 
+  void ExtractVec(double* pDst, const Eigen::Vector2d &src)
+  {
+      for (size_t i = 0; i < 2; i++)
+      {
+          pDst[i] = src[i];
+      }
+  }
+
+  void ExtractVec(double* pDst, const Eigen::Vector3d &src)
+  {
+      for (size_t i = 0; i < 3; i++)
+      {
+          pDst[i] = src[i];
+      }
+  }
+
+  void ExtractVec(double* pDst, const Eigen::Vector4d &src)
+  {
+      for (size_t i = 0; i < 4; i++)
+      {
+          pDst[i] = src[i];
+      }
+  }
+
+  template <int COUNT>
+  void ExtractMat(double* pDst, const Eigen::Matrix<double, COUNT, 1> &src)
+    {
+        for (int i = 0; i < COUNT; i++)
+        {
+            pDst[i] = src[i];
+        }
+    }
+
   class SE3Quat {
     public:
       EIGEN_MAKE_ALIGNED_OPERATOR_NEW;

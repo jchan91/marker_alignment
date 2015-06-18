@@ -5,6 +5,7 @@
  *      Author: jonathan
  */
 
+#define DEBUG 1
 
 #include <iostream>
 #include <vector>
@@ -12,6 +13,7 @@
 #include <string>
 #include <map>
 #include <cmath>
+#include <stdio.h>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -19,17 +21,17 @@
 #include "glog/logging.h"
 #include "ceres/ceres.h"
 #include "ceres/rotation.h"
+#include "ceres/local_parameterization.h"
 
 #include "se3quat.h"
 #include "CameraIntrinsics.h"
 #include "MockData.h"
 #include "MarkerAlignmentProblem.h"
+#include "math_constants.h"
 
 using namespace G2D;
 using namespace std;
 using namespace Eigen;
-
-#define DEBUG 1
 
 // A templated cost functor that implements the residual r = 10 -
 // x. The method operator() is templated so that we can then use an
@@ -83,7 +85,7 @@ void GetMockData(
     dataProvider.LidarMarkers(lidarMarkers);
 
     // Generate the trajectory the rig took. 10 poses, 2 meter radius
-    dataProvider.Trajectory_Circle(poses, 4, 2);
+    dataProvider.Trajectory_Circle(poses, 10, 8);
 
     // Generate the observations the rig would have seen with this trajectory
     dataProvider.Observations<ProjModel>(observations, lidarMarkers, poses, intrinsics, nullptr);
@@ -152,7 +154,8 @@ int main(int /*argc*/, char** argv)
     // Add a residual block for every pose that has an observation
     ceres::Problem problem;
 
-    ceres::LocalParameterization* quat_plus = new ceres::AutoDiffLocalParameterization<QuaternionPlus, 4, 3>;
+//    ceres::LocalParameterization* quat_plus = new ceres::AutoDiffLocalParameterization<QuaternionPlus, 4, 3>;
+    ceres::LocalParameterization* quat_plus = new ceres::QuaternionParameterization;
 
     for (size_t o = 0; o < observations.size(); o++)
     {
@@ -172,21 +175,81 @@ int main(int /*argc*/, char** argv)
     // Run the solver!
     ceres::Solver::Options options;
     options.linear_solver_type = ceres::DENSE_QR;
+    options.min_linear_solver_iterations = 1;
+    options.trust_region_strategy_type = ceres::DOGLEG;
     options.minimizer_progress_to_stdout = true;
+    options.update_state_every_iteration = true;
+    options.gradient_tolerance = 1e-16;
+    options.function_tolerance = 1e-16;
 
     // Initialized residuals/jacobians
     ceres::Problem::EvaluateOptions evaluateOptions;
-    double cost;
+    double cost[2];
     vector<double> residuals;
-    problem.Evaluate(evaluateOptions, &cost, &residuals, NULL, NULL);
+    bool evaluate_result = problem.Evaluate(evaluateOptions, cost, &residuals, NULL, NULL);
+
+    if(!evaluate_result)
+    {
+        cerr << "Failed to evaluate cost function initially" << endl;
+    }
+
+    // Print out evaluate results
+    cout << "Residuals:" << endl;
+    for (size_t i = 0; i < residuals.size(); i++)
+    {
+        cout << residuals[i] << endl;;
+    }
 
     // Optimize away!
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
 
-    std::cout << summary.BriefReport() << "\n";
+    std::cout << summary.message << "\n";
+    std::cout << summary.FullReport() << "\n";
 //    std::cout << "x : " << initial_x
 //            << " -> " << x << "\n";
+
+#ifdef DEBUG
+    double solution_r_d[4];
+    double solution_t_d[3];
+
+    ExtractVec(solution_r_d, solution_r);
+    ExtractVec(solution_t_d, solution_t);
+#endif
+
+    Eigen::Quaterniond solution_final_q(solution_r);
+    SE3Quat solution_final(solution_final_q, solution_t);
+    SE3Quat test_solution = solution_final * gt_solution;
+
+    // Check if the test_solution is identity
+    const double epsilon_r = 1e-4;
+    const double epsilon_t = 1e-4;
+
+    Eigen::AngleAxisd test_a(test_solution.rotation());
+    double test_r = test_a.angle();
+    if (epsilon_r < std::abs(test_r - PI)) test_r = std::abs(test_r - PI);
+    cout << "Rotation test epsilon = " << epsilon_r << endl;
+    cout << "Test solution rotation = " << test_r << endl;
+    if (test_r > epsilon_r)
+    {
+        cout << "Rotation test Failed" << endl;
+    }
+    else
+    {
+        cout << "Rotation test passed" << endl;
+    }
+
+    Eigen::Vector3d test_t(test_solution.translation());
+    cout << "Translation test epsilon = " << epsilon_t << endl;
+    printf("Test solution translation = (%f, %f, %f)\n", test_t[0], test_t[2], test_t[2]);
+    if (epsilon_t < test_t[0] || epsilon_t < test_t[1] || epsilon_t < test_t[2])
+    {
+        cout << "Translation test Failed" << endl;
+    }
+    else
+    {
+        cout << "Translation test passed" << endl;
+    }
 
 
 	return 0;

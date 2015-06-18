@@ -110,9 +110,21 @@ namespace G2D
                     // Convert the marker to homogeneous coords
                     obs_xyz[0] /= obs_xyz[2];
                     obs_xyz[1] /= obs_xyz[2];
+
+#ifdef DEBUG
+                    double obs_xyz_d[3];
+                    ExtractVec(obs_xyz_d, obs_xyz);
+#endif
+
                     if (pIntrinsics->Project(obs_uv_h.data(), obs_xyz.data()))
                     {
                         Eigen::Vector2d obs_uv_p( { obs_uv_h[0] * width, obs_uv_h[1] * height });
+
+#ifdef DEBUG
+                        double obs_uv_p_d[2];
+                        obs_uv_p_d[0] = obs_uv_p[0];
+                        obs_uv_p_d[1] = obs_uv_p[1];
+#endif
                         // TODO: camera noise modeling here
                         obs.push_back({ markers[m].id, poses[p].frame_id, obs_uv_p });
                     }
@@ -143,7 +155,7 @@ namespace G2D
 
         void Solution(SE3Quat &lidar2rig)
         {
-            double angle = 0;
+            double angle = PI / 180;
             Eigen::Vector3d translation(0.0, 0.0, 0.0);
             Eigen::Quaterniond q(Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitY()));
 

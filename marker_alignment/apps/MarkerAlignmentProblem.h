@@ -84,13 +84,13 @@ namespace G2D
         bool operator() (const T* lidar2world_q, const T* lidar2world_t, T* residuals) const
         {
     #ifdef DEBUG
-            Eigen::Matrix<T,4,1> l2w_q;
+            T l2w_q[4];
             l2w_q[0] = lidar2world_q[0];
             l2w_q[1] = lidar2world_q[1];
             l2w_q[2] = lidar2world_q[2];
             l2w_q[3] = lidar2world_q[3];
 
-            Eigen::Matrix<T,3,1> l2w_t;
+            T l2w_t[3];
             l2w_t[0] = lidar2world_t[0];
             l2w_t[1] = lidar2world_t[1];
             l2w_t[2] = lidar2world_t[2];
@@ -135,7 +135,14 @@ namespace G2D
             residuals[1] = m_observedMarker_t.data()[1] - pixel[1];
 
     #ifdef DEBUG
-            Eigen::Matrix<T, 2, 1> residuals_debug(residuals);
+            T l_pos_w[3];
+            l_pos_w[0] = lidarMarker[0];
+            l_pos_w[1] = lidarMarker[1];
+            l_pos_w[2] = lidarMarker[2];
+
+            T residuals_debug[2];
+            residuals_debug[0] = residuals[0];
+            residuals_debug[1] = residuals[1];
     #endif
 
             return true;
