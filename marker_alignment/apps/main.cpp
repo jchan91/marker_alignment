@@ -23,6 +23,8 @@
 #include "ceres/rotation.h"
 #include "ceres/local_parameterization.h"
 
+#include <opencv2/opencv.hpp>
+
 #include "se3quat.h"
 #include "CameraIntrinsics.h"
 #include "MockData.h"
@@ -250,7 +252,6 @@ int main(int /*argc*/, char** argv)
     {
         cout << "Translation test passed" << endl;
     }
-
 
 	return 0;
 }

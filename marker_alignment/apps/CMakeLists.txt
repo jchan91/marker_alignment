@@ -26,4 +26,4 @@ ADD_EXECUTABLE(marker_alignment
 
 SET_TARGET_PROPERTIES(marker_alignment PROPERTIES OUTPUT_NAME marker_alignment${EXE_POSTFIX})
 
-TARGET_LINK_LIBRARIES(marker_alignment ${CERES_LIBRARIES})
+TARGET_LINK_LIBRARIES(marker_alignment ${CERES_LIBRARIES} ${OpenCV_LIBS})

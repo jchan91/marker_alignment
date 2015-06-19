@@ -160,6 +160,9 @@ ENDIF(OPENMP_FOUND AND MARKER_ALIGNMENT_USE_OPENMP)
 # For non-linear least squares solver
 FIND_PACKAGE(Ceres REQUIRED)
 
+# For general CV stuff
+FIND_PACKAGE(OpenCV REQUIRED)
+
 # shall we build the core apps using the library
 SET(MARKER_ALIGNMENT_BUILD_APPS ON CACHE BOOL "Build MARKER_ALIGNMENT apps")
 IF(MARKER_ALIGNMENT_BUILD_APPS)
