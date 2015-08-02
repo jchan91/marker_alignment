@@ -118,9 +118,11 @@ int main(int /*argc*/, char** argv)
 {
     google::InitGoogleLogging(argv[0]);
 
-
     G2D::Viewer3D* pViewer = new G2D::Viewer3D();
-    pViewer->RunAsync();
+    pViewer->InitializeAndRunAsync();
+    pViewer->MaybeYieldToViewer();
+    pViewer->MaybeYieldToViewer();
+    std::cout << "Viewer unpaused!" << std::endl;
 
     vector<LidarObservation> observations;
     vector<LidarMarker> lidarMarkers;

@@ -26,6 +26,8 @@ ADD_EXECUTABLE(marker_alignment
   MarkerAlignmentProblem.h
   visualization/Viewer3D.h
   visualization/Viewer3D.cpp
+  visualization/ViewerColors.h
+  visualization/ViewerButton.h
   main.cpp
 )
 

@@ -1,12 +1,8 @@
 #include "Viewer3D.h"
 
-#include <pcl/visualization/cloud_viewer.h>
-//#include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/common/common_headers.h>
-#include <pcl/io/io.h>
-#include <pcl/io/pcd_io.h>
-
+// TODO: Remove conesource
 #include <vtkConeSource.h>
+
 
 #include <iostream>
 #include <functional>
@@ -14,19 +10,47 @@
 
 namespace G2D
 {
-    bool Viewer3D::CreateAndInit(Viewer3D** ppViewer)
+    class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
     {
-        Viewer3D* pViewer = new Viewer3D;
-//        boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
-//        pcl::visualization::CloudViewer viewer("Cloud Viewer");
-        pViewer->m_viewer = new pcl::visualization::CloudViewer("Cloud Viewer");
+      public:
+        static KeyPressInteractorStyle* New()
+        {
+            return new KeyPressInteractorStyle;
+        }
+        vtkTypeMacro(KeyPressInteractorStyle, vtkInteractorStyleTrackballCamera);
 
-//        pViewer->m_newCloudDataReady.load(false);
-//        pViewer->m_cloudListBusy.load(false);
+        virtual void OnKeyPress()
+        {
+            // Get the keypress
+            vtkRenderWindowInteractor *rwi = this->Interactor;
+            std::string key = rwi->GetKeySym();
 
-        *ppViewer = pViewer;
-        return true;
-    }
+            if(key == "space")
+            {
+                std::cout << "[INFO] Viewer3D: Step" << std::endl;
+                m_pViewer->Step();
+            }
+            else if (key == "Return")
+            {
+                std::cout << "[INFO] Viewer3D: Play" << std::endl;
+                m_pViewer->Play();
+            }
+            // Handle on exit (vtk has no callback registration on exit)
+            else if(key == "e")
+            {
+                // Release the user application
+                // TODO: Call a better "terminating" function on viewer?
+                std::cout << "[INFO] Viewer3D: Exiting" << std::endl;
+                m_pViewer->Play();
+            }
+
+            // Forward events
+            vtkInteractorStyleTrackballCamera::OnKeyPress();
+        }
+
+        Viewer3D* m_pViewer;
+
+    };
 
     class viewerTimerCallback : public vtkCommand
     {
@@ -51,11 +75,9 @@ namespace G2D
                     onTimerCallback(caller, eventId);
                 }
             }
-            std::cout << "TimerCount: " << this->TimerCount << std::endl;
         }
 
     private:
-        // TODO: Remove this
         unsigned long TimerCount;
 
     public:
@@ -71,12 +93,7 @@ namespace G2D
 
     Viewer3D::~Viewer3D()
     {
-    }
-
-    void RunViewerAsyncCallback(Viewer3D* pViewer)
-    {
-        // Render/Interact
-        pViewer->InitializeAndRun();
+        // TODO: Implement something to kill the thread?
     }
 
     void Viewer3D::InitializeAndRun()
@@ -88,18 +105,16 @@ namespace G2D
         m_pRenderWindow->AddRenderer(m_pRenderer);
         m_pRenderWindowInteractor = ::vtkRenderWindowInteractor::New();
         m_pRenderWindowInteractor->SetRenderWindow(m_pRenderWindow);
+        m_pRenderWindowInteractor->Initialize();
 
         // TODO: Remove this test code
         // Create a cone
         m_pConeSrc = ::vtkConeSource::New();
         m_pConeSrc->SetResolution(8);
-
         ::vtkPolyDataMapper* pMapper = ::vtkPolyDataMapper::New();
         pMapper->SetInput(m_pConeSrc->GetOutput());
-
         ::vtkActor* pActor = ::vtkActor::New();
         pActor->SetMapper(pMapper);
-
         // Set the actor into the scene
         m_pRenderer->AddActor(pActor);
 
@@ -108,46 +123,34 @@ namespace G2D
         // update function an observer of the timer
         viewerTimerCallback* pCallback = viewerTimerCallback::New();
         pCallback->onTimerCallback =
-                [&](vtkObject* caller, unsigned long eventId)
+                [&](::vtkObject* caller, unsigned long eventId)
                 {
                     this->OnPollUpdate(caller, eventId);
                 };
-        m_pRenderWindowInteractor->AddObserver(vtkCommand::TimerEvent, pCallback);
+        m_pRenderWindowInteractor->AddObserver(::vtkCommand::TimerEvent, pCallback);
         m_pRenderWindowInteractor->CreateRepeatingTimer(100); // Fire every 100 ms
 
-        // Start Render/Interact
-        m_playstate = PLAYSTATE_PAUSE; // Pause and give user a chance for control
+        // Set a callback for keyboard commands
+        vtkSmartPointer<KeyPressInteractorStyle> style =
+                vtkSmartPointer<KeyPressInteractorStyle>::New();
+        style->m_pViewer = this;
+        m_pRenderWindowInteractor->SetInteractorStyle(style);
+        style->SetCurrentRenderer(m_pRenderer);
+
+        // Start Render
         m_pRenderWindow->Render();
-        m_pRenderWindowInteractor->Initialize();
+
+        // Start interaction
         m_pRenderWindowInteractor->Start();
     }
 
-    void Viewer3D::Run()
+    void Viewer3D::InitializeAndRunAsync()
     {
-//        RunViewer(m_pRenderWindow, m_pRenderWindowInteractor);
-    }
-
-    void Viewer3D::RunAsync()
-    {
-//        m_viewer->showCloud(m_pCloud);
-
-//        boost::function1<void, pcl::visualization::PCLVisualizer&> itr = this->DoItr;
-//        std::function<void(pcl::visualization::PCLVisualizer&)> itr = this->DoItr;
-//        m_viewer->runOnVisualizationThread(itr);
-
-        // Start VTK WindowRenderInteractor on another thread
-        std::thread renderThread(RunViewerAsyncCallback, this);
+        m_renderThread = std::thread(&Viewer3D::InitializeAndRun, this);
     }
 
     bool Viewer3D::AddPoints(const std::vector<Eigen::Vector3d>* pPoints)
     {
-//        for (Eigen::Vector3d pt : *pPoints)
-//        {
-//            pcl::PointXYZRGB pt_pcl(pt[0], pt[1], pt[2]);
-//            m_pCloud->push_back(pt_pcl);
-//        }
-
-
         // TODO: Maybe this function shouldn't directly update actors
         // Maybe just queue up request here and let poll do the updating
         double xyz[3];
@@ -161,32 +164,59 @@ namespace G2D
     void Viewer3D::MaybeYieldToViewer()
     {
         // Wait on the viewer until the user resumes playing
-        std::unique_lock<std::mutex>(m_playstate_lock);
-        m_playstate_changed.wait(m_playstate_lock, [this]{ return m_playstate != PLAYSTATE_PAUSE; });
+        std::unique_lock<std::mutex> lock(m_playstate_lock);
+        m_playstate_changed.wait(
+                lock,
+                [this]
+                {
+                    return m_playstate != PLAYSTATE_PAUSE;
+                });
+
+        // If user has only asked to step, then set playstate
+        // back to a paused
+        if (m_playstate == PLAYSTATE_STEP)
+        {
+            m_playstate = PLAYSTATE_PAUSE;
+        }
 
         // Free the lock and let caller resume work
-        m_playstate_lock.unlock();
+        lock.unlock();
     }
 
     void Viewer3D::Play()
     {
-        std::lock_guard<std::mutex> playstateLock(m_playstate_lock);
-        m_playstate = PLAYSTATE_PLAY;
-        m_playstate_changed.notify_all();
+        bool playstateChanged = false;
+        {
+            std::lock_guard<std::mutex> playstateLock(m_playstate_lock);
+            playstateChanged = (m_playstate != PLAYSTATE_PLAY);
+            m_playstate = PLAYSTATE_PLAY;
+        }
+        if (playstateChanged)
+            m_playstate_changed.notify_all();
     }
 
     void Viewer3D::Pause()
     {
-        std::lock_guard<std::mutex> playstateLock(m_playstate_lock);
-        m_playstate = PLAYSTATE_PAUSE;
-        m_playstate_changed.notify_all();
+        bool playstateChanged = false;
+        {
+            std::lock_guard<std::mutex> playstateLock(m_playstate_lock);
+            playstateChanged = (m_playstate != PLAYSTATE_PAUSE);
+            m_playstate = PLAYSTATE_PAUSE;
+        }
+        if (playstateChanged)
+            m_playstate_changed.notify_all();
     }
 
     void Viewer3D::Step()
     {
-        std::lock_guard<std::mutex> playstateLock(m_playstate_lock);
-        m_playstate = PLAYSTATE_STEP;
-        m_playstate_changed.notify_all();
+        bool playstateChanged = false;
+        {
+            std::lock_guard<std::mutex> playstateLock(m_playstate_lock);
+            playstateChanged = (m_playstate != PLAYSTATE_STEP);
+            m_playstate = PLAYSTATE_STEP;
+        }
+        if (playstateChanged)
+            m_playstate_changed.notify_all();
     }
 
     // Will be synchronously called by the vtk platform, so all
@@ -195,15 +225,5 @@ namespace G2D
     {
         // Update the actors
         this->AddPoints(nullptr); // TODO: Remove this
-
-        // If user has only asked to step, then set playstate
-        // back to a paused
-        {
-            std::lock_guard<std::mutex> playstateLock(m_playstate_lock); // RAII Scoped lock
-            if (m_playstate == PLAYSTATE_STEP)
-            {
-                m_playstate = PLAYSTATE_PAUSE;
-            }
-        }
     }
 }

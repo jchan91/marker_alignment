@@ -4,6 +4,7 @@
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
+#include <thread>
 
 #include <Eigen/Core>
 #include <pcl/visualization/cloud_viewer.h>
@@ -14,23 +15,18 @@
 #include <vtkRenderer.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkConeSource.h>
+#include <vtkSmartPointer.h>
 
 namespace G2D
 {
     class Viewer3D
     {
     public:
-        static bool CreateAndInit(Viewer3D** ppViewer);
-
         Viewer3D();
         ~Viewer3D();
 
         void InitializeAndRun();
         void InitializeAndRunAsync();
-
-        void Run();
-
-        void RunAsync();
 
         void MaybeYieldToViewer();
 
@@ -59,6 +55,7 @@ namespace G2D
         ::vtkRenderer* m_pRenderer;
         ::vtkRenderWindow* m_pRenderWindow;
         ::vtkRenderWindowInteractor* m_pRenderWindowInteractor;
+        std::thread m_renderThread;
 
 
         std::mutex m_playstate_lock;
