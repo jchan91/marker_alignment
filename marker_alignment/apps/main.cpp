@@ -31,6 +31,9 @@
 #include "MarkerAlignmentProblem.h"
 #include "math_constants.h"
 
+// Visualization
+#include "Viewer3D.h"
+
 using namespace G2D;
 using namespace std;
 using namespace Eigen;
@@ -114,6 +117,10 @@ void CreateMockCameraIntrinsics(ProjModel** ppIntrinsics)
 int main(int /*argc*/, char** argv)
 {
     google::InitGoogleLogging(argv[0]);
+
+
+    G2D::Viewer3D* pViewer = new G2D::Viewer3D();
+    pViewer->RunAsync();
 
     vector<LidarObservation> observations;
     vector<LidarMarker> lidarMarkers;
@@ -252,6 +259,18 @@ int main(int /*argc*/, char** argv)
     {
         cout << "Translation test passed" << endl;
     }
+
+    // TODO: Visualize the output
+//    Viewer3D* pViewer = nullptr;
+//    bool success = Viewer3D::CreateAndInit(&pViewer);
+//    if(!success)
+//    {
+//        cout << "Failed to create viewer" << endl;
+//    }
+//    else
+//    {
+//
+//    }
 
 	return 0;
 }
