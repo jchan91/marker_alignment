@@ -121,8 +121,6 @@ int main(int /*argc*/, char** argv)
     G2D::Viewer3D* pViewer = new G2D::Viewer3D();
     pViewer->InitializeAndRunAsync();
     pViewer->MaybeYieldToViewer();
-    pViewer->MaybeYieldToViewer();
-    std::cout << "Viewer unpaused!" << std::endl;
 
     vector<LidarObservation> observations;
     vector<LidarMarker> lidarMarkers;
@@ -135,6 +133,24 @@ int main(int /*argc*/, char** argv)
     CreateMockCameraIntrinsics<LinearCameraIntrinsics>(&pIntrinsics);
     spIntrinsics.reset(pIntrinsics);
     GetMockData<LinearCameraIntrinsics>(observations, lidarMarkers, poses, gt_solution, spIntrinsics.get());
+
+    {
+        size_t i = 0;
+        pViewer->AddPoints(
+                 [&](Eigen::Vector3d & pt, G2D::ViewerColor & color) -> bool
+                 {
+                     if (i >= lidarMarkers.size())
+                         return false;
+
+                     pt = lidarMarkers[i].pos;
+                     color = G2D::ViewerColors::Banana;
+                     ++i;
+
+                     return true;
+                 });
+    }
+    pViewer->MaybeYieldToViewer();
+
 
     // Setup dictionaries to look up poses/lidar markers by ids
     std::map<int, LidarMarker> lidarMarkers_dict;

@@ -2,13 +2,18 @@
 
 namespace G2D
 {
-    typedef unsigned char* ViewerColor;
+    struct ViewerColor
+    {
+        unsigned char r;
+        unsigned char g;
+        unsigned char b;
+    };
 
     class ViewerColors
     {
     public:
-        static constexpr unsigned char Banana[3] = { 227, 207, 87 };
-        static constexpr unsigned char Tomato[3] = { 255, 99, 71 };
+        static constexpr ViewerColor Banana = { 227, 207, 87 };
+        static constexpr ViewerColor Tomato = { 255, 99, 71 };
     };
 
 }
