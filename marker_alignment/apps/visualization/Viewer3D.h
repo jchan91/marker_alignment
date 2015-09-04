@@ -10,7 +10,6 @@
 #include <thread>
 
 #include <Eigen/Core>
-#include <pcl/visualization/cloud_viewer.h>
 
 #include <vtkPolyDataMapper.h>
 #include <vtkActor.h>

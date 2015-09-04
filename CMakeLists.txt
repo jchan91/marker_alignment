@@ -163,12 +163,6 @@ FIND_PACKAGE(Ceres REQUIRED)
 # For general CV stuff
 FIND_PACKAGE(OpenCV REQUIRED)
 
-# For PCL to help visualize stuff
-find_package(PCL 1.3 REQUIRED COMPONENTS common io visualization)
-include_directories(${PCL_INCLUDE_DIRS})
-link_directories(${PCL_LIBRARY_DIRS})
-add_definitions(${PCL_DEFINITIONS})
-
 # For VTK to help visualize stuff
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
