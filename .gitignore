@@ -30,3 +30,9 @@ bin
 *.exe
 *.out
 *.app
+
+# GTAGS
+GPATH
+GRTAGS
+GSYMS
+GTAGS
