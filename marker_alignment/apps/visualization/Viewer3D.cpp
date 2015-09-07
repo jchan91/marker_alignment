@@ -3,6 +3,11 @@
 // TODO: Remove conesource
 #include <vtkConeSource.h>
 
+#include <vtkInteractorStyleTrackballCamera.h>
+#include <vtkCommand.h>
+#include <vtkCellArray.h>
+#include <vtkProperty.h>
+
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
@@ -12,7 +17,7 @@
 
 namespace G2D
 {
-    class KeyPressInteractorStyle : public vtkInteractorStyleTrackballCamera
+    class KeyPressInteractorStyle : public ::vtkInteractorStyleTrackballCamera
     {
       public:
         static KeyPressInteractorStyle* New()
