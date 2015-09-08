@@ -87,7 +87,8 @@ namespace G2D
 
         template <typename ProjModel>
         void Observations(
-                std::vector<LidarObservation> &obs,
+                std::vector<LidarObservation,
+                            Eigen::aligned_allocator<LidarObservation>> &obs,
                 const std::vector<LidarMarker> &markers,
                 const std::vector<FramePose> &poses,
                 const ProjModel* pIntrinsics,

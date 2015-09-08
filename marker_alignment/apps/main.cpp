@@ -17,6 +17,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <Eigen/StdVector>
 
 #include "glog/logging.h"
 #include "ceres/ceres.h"
@@ -78,7 +79,8 @@ void CeresSolver()
 
 template <typename ProjModel>
 void GetMockData(
-        vector<LidarObservation> &observations,
+        vector<LidarObservation,
+               Eigen::aligned_allocator<LidarObservation>> &observations,
         vector<LidarMarker> &lidarMarkers,
         vector<FramePose> &poses,
         SE3Quat &solution,
@@ -122,7 +124,8 @@ int main(int /*argc*/, char** argv)
     pViewer->InitializeAndRunAsync();
     pViewer->MaybeYieldToViewer();
 
-    vector<LidarObservation> observations;
+    vector<LidarObservation,
+           Eigen::aligned_allocator<LidarObservation>> observations;
     vector<LidarMarker> lidarMarkers;
     vector<FramePose> poses;
     shared_ptr<LinearCameraIntrinsics> spIntrinsics;
@@ -132,7 +135,12 @@ int main(int /*argc*/, char** argv)
     LinearCameraIntrinsics* pIntrinsics = nullptr;
     CreateMockCameraIntrinsics<LinearCameraIntrinsics>(&pIntrinsics);
     spIntrinsics.reset(pIntrinsics);
-    GetMockData<LinearCameraIntrinsics>(observations, lidarMarkers, poses, gt_solution, spIntrinsics.get());
+    GetMockData<LinearCameraIntrinsics>(
+            observations,
+            lidarMarkers,
+            poses,
+            gt_solution,
+            spIntrinsics.get());
 
     {
         size_t i = 0;
