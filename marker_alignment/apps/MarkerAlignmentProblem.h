@@ -61,6 +61,9 @@ namespace G2D
     template <typename ProjModel>
     struct LidarReprojectionError
     {
+        // Use Eigen constructor to generate 16-byte aligned ptrs
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+        
         LidarReprojectionError(
             Eigen::Vector2d observedMarker,
             Eigen::Vector3d lidarMarker,

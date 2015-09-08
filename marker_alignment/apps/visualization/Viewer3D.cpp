@@ -156,8 +156,11 @@ namespace G2D
                 {
                     this->OnPollUpdate(caller, eventId);
                 };
-        m_pRenderWindowInteractor->AddObserver(::vtkCommand::TimerEvent, pCallback);
-        m_pRenderWindowInteractor->CreateRepeatingTimer(100); // Fire every 100 ms
+        m_pRenderWindowInteractor->AddObserver(
+                ::vtkCommand::TimerEvent,
+                pCallback);
+        // Fire every 100 ms
+        m_pRenderWindowInteractor->CreateRepeatingTimer(100); 
 
         // Set a callback for keyboard commands
         vtkSmartPointer<KeyPressInteractorStyle> style =
@@ -247,7 +250,9 @@ namespace G2D
     }
 
     bool Viewer3D::AddPoints(
-        std::function<bool(Eigen::Vector3d &, G2D::ViewerColor &)> GetNextPoint,
+        std::function<bool(
+                Eigen::Vector3d &,
+                G2D::ViewerColor &)> GetNextPoint,
         const ViewerAddOpts* pOpts)
     {
         Viewer3D::ViewerAddOpts options; // Use initialized defaults
@@ -272,11 +277,20 @@ namespace G2D
                             static_cast<float>(pt_eigen[2])
                     };
                     ::vtkIdType pid[1];
-                    pid[0] = this->m_pPoints->InsertNextPoint(pt_f[0], pt_f[1], pt_f[2]);
-                    this->m_pPoints_vertices->InsertNextCell(1, pid);
+                    pid[0] = this->m_pPoints->InsertNextPoint(
+                            pt_f[0],
+                            pt_f[1],
+                            pt_f[2]);
+                    this->m_pPoints_vertices->InsertNextCell(
+                            1,
+                            pid);
 
-                    // TODO: Should this be moved to OnPollUpdate, in case of race condition with render thread?
-                    this->m_pPoints->Modified(); // Tell the renderer points have been modified
+                    // TODO: Should this be moved to OnPollUpdate, in case
+                    // of race condition with render thread?
+                    
+                    // Tell the renderer points have been modified
+                    this->m_pPoints->Modified(); 
+
                     // TODO: Incorporate color
 
                     if (!m_pointsAdded.load())

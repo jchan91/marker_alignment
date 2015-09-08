@@ -22,6 +22,8 @@ namespace G2D
     struct LidarMarker
     {
         int id;
+
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         Eigen::Vector3d pos;
     };
 
@@ -29,6 +31,8 @@ namespace G2D
     {
         int marker_id;
         int frame_id;
+
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
         Eigen::Vector2d uv;
     };
 

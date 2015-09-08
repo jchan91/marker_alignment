@@ -27,6 +27,9 @@ namespace G2D
     class Pose
     {
     public:
+        // Use Eigen constructor to generate 16-byte aligned ptrs
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
         Eigen::Vector4f q;
         Eigen::Vector3f t;
 
