@@ -7,6 +7,7 @@
 #include <vtkCommand.h>
 #include <vtkCellArray.h>
 #include <vtkProperty.h>
+#include <vtkPointData.h>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -105,6 +106,58 @@ namespace G2D
         m_pRenderWindowInteractor->TerminateApp();
     }
 
+    void Viewer3D::PolydataAlgoSetInputData(::vtkPolyDataAlgorithm* pPolydata, ::vtkDataObject* pInput)
+    {
+        #if VTK_MAJOR_VERSION <= 5
+        pPolydata->SetInput(pInput);
+        #else
+        pPolydata->SetInputData(pInput);
+        #endif
+    }
+    void Viewer3D::PolydataMapperSetPolyData(::vtkPolyDataMapper* pMapper, ::vtkPolyData* pPolyData)
+    {
+        #if VTK_MAJOR_VERSION <= 5
+        pMapper->SetInputConnection(pPolyData->GetProducerPort());
+        #else
+          pMapper->SetInputData(pPolyData);
+        #endif
+    }
+
+    void Viewer3D::SetupVtkColoredPoints()
+    {
+        // Allocate memory to hold the points
+        // Create a polydata object that holds the points
+        m_pPoints = vtkSmartPointer<vtkPoints>::New();
+        m_pPoints_polydata = vtkSmartPointer<vtkPolyData>::New();
+        m_pPoints_polydata->SetPoints(m_pPoints);
+
+        // Create a vertex filter for the points, which will eventually filter the points and add color
+        m_pPoints_vertexFilter = vtkSmartPointer<vtkVertexGlyphFilter>::New();
+        PolydataAlgoSetInputData(m_pPoints_vertexFilter, m_pPoints_polydata);
+        m_pPoints_vertexFilter->Update();
+
+        // Create a polydata object that holds the points, after filtering
+        m_pPoints_filteredPolydata = vtkSmartPointer<vtkPolyData>::New();
+        m_pPoints_filteredPolydata->ShallowCopy(m_pPoints_vertexFilter->GetOutput());
+
+        // Allocate memory to hold the colors
+        m_pPoints_colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+        m_pPoints_colors->SetNumberOfComponents(3);
+        m_pPoints_colors->SetName ("Colors");
+
+        // Map the filtered polydata to an actor, and add to renderer
+        vtkSmartPointer<vtkPolyDataMapper> mapper =
+          vtkSmartPointer<vtkPolyDataMapper>::New();
+        PolydataMapperSetPolyData(mapper, m_pPoints_filteredPolydata);
+
+        vtkSmartPointer<vtkActor> actor =
+          vtkSmartPointer<vtkActor>::New();
+        actor->SetMapper(mapper);
+        actor->GetProperty()->SetPointSize(5);
+
+        m_pRenderer->AddActor(actor);
+    }
+
     void Viewer3D::InitializeAndRun()
     {
         // Create render/window/interactor
@@ -116,25 +169,10 @@ namespace G2D
         m_pRenderWindowInteractor->SetRenderWindow(m_pRenderWindow);
         m_pRenderWindowInteractor->Initialize();
 
-        // Create the possible actors
-        m_pPoints = ::vtkSmartPointer<::vtkPoints>(::vtkPoints::New());
-        m_pPoints_vertices = ::vtkSmartPointer<::vtkCellArray>(::vtkCellArray::New());
+        // Create the "actors" (e.g. point clouds, pose frustums, etc.)
 
-        m_pPoints_polydata = ::vtkSmartPointer<::vtkPolyData>(::vtkPolyData::New());
-        m_pPoints_polydata->SetPoints(m_pPoints.GetPointer());
-        m_pPoints_polydata->SetVerts(m_pPoints_vertices.GetPointer());
-
-        auto pPointsMapper = ::vtkSmartPointer<::vtkPolyDataMapper>(::vtkPolyDataMapper::New());
-        #if VTK_MAJOR_VERSION <= 5
-        pPointsMapper->SetInput(m_pPoints_polydata);
-        #else
-        pPointsMapper->SetInputData(m_pPoints_polydata);
-        #endif
-
-        m_pPoints_actor = ::vtkSmartPointer<::vtkActor>(::vtkActor::New());
-        m_pPoints_actor->SetMapper(pPointsMapper);
-        m_pPoints_actor->GetProperty()->SetPointSize(20); // Default point size 20
-        m_pRenderer->AddActor(m_pPoints_actor);
+        // Add points
+        SetupVtkColoredPoints();
 
         // TODO: Remove this test code
         // Create a cone
@@ -267,37 +305,37 @@ namespace G2D
 
             if (options.NoCopy)
             {
+                // Allocate colors array
                 Eigen::Vector3d pt_eigen;
                 G2D::ViewerColor color;
                 while (GetNextPoint(pt_eigen, color))
                 {
-                    float pt_f[3] = {
+                    // Insert new points
+                    m_pPoints->InsertNextPoint(
                             static_cast<float>(pt_eigen[0]),
                             static_cast<float>(pt_eigen[1]),
-                            static_cast<float>(pt_eigen[2])
+                            static_cast<float>(pt_eigen[2]));
+
+                    unsigned char color_uch[3] = {
+                            color.r,
+                            color.g,
+                            color.b
                     };
-                    ::vtkIdType pid[1];
-                    pid[0] = this->m_pPoints->InsertNextPoint(
-                            pt_f[0],
-                            pt_f[1],
-                            pt_f[2]);
-                    this->m_pPoints_vertices->InsertNextCell(
-                            1,
-                            pid);
-
-                    // TODO: Should this be moved to OnPollUpdate, in case
-                    // of race condition with render thread?
-                    
-                    // Tell the renderer points have been modified
-                    this->m_pPoints->Modified(); 
-
-                    // TODO: Incorporate color
-
-                    if (!m_pointsAdded.load())
-                    {
-                        m_pointsAdded.store(true);
-                    }
+                    m_pPoints_colors->InsertNextTupleValue(color_uch);
                 }
+
+                // Update internal polydata last modified timer
+                m_pPoints->Modified();
+
+                // Set the polydata/device mappers to the new data
+                m_pPoints_polydata->SetPoints(m_pPoints);
+
+                PolydataAlgoSetInputData(m_pPoints_vertexFilter, m_pPoints_polydata);
+                m_pPoints_vertexFilter->Update();
+
+                m_pPoints_filteredPolydata->ShallowCopy(m_pPoints_vertexFilter->GetOutput());
+
+                m_pPoints_filteredPolydata->GetPointData()->SetScalars(m_pPoints_colors);
             }
             else
             {

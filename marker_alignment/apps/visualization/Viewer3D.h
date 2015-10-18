@@ -19,6 +19,7 @@
 #include <vtkConeSource.h>
 #include <vtkSmartPointer.h>
 #include <vtkPoints.h>
+#include <vtkVertexGlyphFilter.h>
 
 namespace G2D
 {
@@ -76,6 +77,16 @@ namespace G2D
         // have been made to the viewer (e.g. AddPoints called?)
         void OnPollUpdate(vtkObject* caller, unsigned long eventId);
 
+        // Decription:
+        // VTK helpers to deal with legacy vtk versions
+        static void PolydataAlgoSetInputData(::vtkPolyDataAlgorithm* pPolydata, ::vtkDataObject* pInput);
+        static void PolydataMapperSetPolyData(::vtkPolyDataMapper* pMapper, ::vtkPolyData* pPolyData);
+
+        // Description:
+        // Helper initializer meant for the Viewer ctor. Sets up the associated vtk variables
+        // to display colored points
+        void SetupVtkColoredPoints();
+
         // VTK Renderer/Windows
         ::vtkRenderer* m_pRenderer;
         ::vtkRenderWindow* m_pRenderWindow;
@@ -94,8 +105,10 @@ namespace G2D
         std::atomic_bool m_pointsAdded;
         std::mutex m_points_lock;
         ::vtkSmartPointer<::vtkPoints> m_pPoints;
-        ::vtkSmartPointer<::vtkCellArray> m_pPoints_vertices;
+        ::vtkSmartPointer<::vtkVertexGlyphFilter> m_pPoints_vertexFilter;
         ::vtkSmartPointer<::vtkPolyData> m_pPoints_polydata;
+        ::vtkSmartPointer<::vtkPolyData> m_pPoints_filteredPolydata;
+        ::vtkSmartPointer<::vtkUnsignedCharArray> m_pPoints_colors;
         ::vtkSmartPointer<::vtkActor> m_pPoints_actor;
 
         // TODO: Remove test code

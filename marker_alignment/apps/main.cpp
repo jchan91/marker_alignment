@@ -159,6 +159,27 @@ int main(int /*argc*/, char** argv)
     }
     pViewer->MaybeYieldToViewer();
 
+    // TODO: Remove this test code
+    std::vector<Eigen::Vector3d> randPts;
+    randPts.push_back(Eigen::Vector3d(1.0, 1.0, 0.0));
+    randPts.push_back(Eigen::Vector3d(0.0, 1.0, 0.0));
+    randPts.push_back(Eigen::Vector3d(1.0, 0.0, 0.0));
+    randPts.push_back(Eigen::Vector3d(0.0, 0.0, 0.0));
+    size_t j = 0;
+    pViewer->AddPoints(
+            [&](Eigen::Vector3d & pt, G2D::ViewerColor & color) -> bool
+            {
+                if (j >= randPts.size())
+                    return false;
+
+                pt = randPts[j];
+                color = G2D::ViewerColors::Red;
+                ++j;
+
+                return true;
+            });
+    pViewer->MaybeYieldToViewer();
+
 
     // Setup dictionaries to look up poses/lidar markers by ids
     std::map<int, LidarMarker> lidarMarkers_dict;

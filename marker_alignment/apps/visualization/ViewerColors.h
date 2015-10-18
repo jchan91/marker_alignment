@@ -14,6 +14,7 @@ namespace G2D
     public:
         static constexpr ViewerColor Banana = { 227, 207, 87 };
         static constexpr ViewerColor Tomato = { 255, 99, 71 };
+        static constexpr ViewerColor Red = { 255, 0, 0 };
     };
 
 }
