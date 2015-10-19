@@ -21,6 +21,10 @@
 #include <vtkPoints.h>
 #include <vtkVertexGlyphFilter.h>
 
+#include <vtkPyramid.h>
+#include <vtkUnstructuredGrid.h>
+#include <vtkDataSetMapper.h>
+
 namespace G2D
 {
     class Viewer3D
@@ -58,6 +62,16 @@ namespace G2D
                 std::function<bool(Eigen::Vector3d &, G2D::ViewerColor &)> GetNextPoint,
                 const ViewerAddOpts* pOpts = nullptr);
 
+        // Description:
+        // Adds a pyramid to the scene. Useful for representing a camera pose
+        bool AddFrustum(
+                const double origin[3],
+                const double topRight[3],
+                const double topLeft[3],
+                const double bottomLeft[3],
+                const double bottomRight[3],
+                const ViewerAddOpts* pOpts = nullptr);
+
     private:
         // Description:
         // Playstate represents the state of the user of the viewer,
@@ -81,11 +95,17 @@ namespace G2D
         // VTK helpers to deal with legacy vtk versions
         static void PolydataAlgoSetInputData(::vtkPolyDataAlgorithm* pPolydata, ::vtkDataObject* pInput);
         static void PolydataMapperSetPolyData(::vtkPolyDataMapper* pMapper, ::vtkPolyData* pPolyData);
+        static void DataSetMapperSetDataSet(::vtkDataSetMapper* pMapper, ::vtkDataSet* pDataSet);
 
         // Description:
         // Helper initializer meant for the Viewer ctor. Sets up the associated vtk variables
         // to display colored points
         void SetupVtkColoredPoints();
+
+        // Description:
+        // Helper initializer meant for the Viewer ctor. Sets up the associated vtk variables
+        // to display pyramids that represent the camera pose, and FOV (estimate)
+        void SetupVtkPoseFrustums();
 
         // VTK Renderer/Windows
         ::vtkRenderer* m_pRenderer;
@@ -101,7 +121,7 @@ namespace G2D
         // Data to render. Must acquire lock before using any of the data being
         // rendered.
 
-        // Points
+        // Colored Points
         std::atomic_bool m_pointsAdded;
         std::mutex m_points_lock;
         ::vtkSmartPointer<::vtkPoints> m_pPoints;
@@ -110,6 +130,15 @@ namespace G2D
         ::vtkSmartPointer<::vtkPolyData> m_pPoints_filteredPolydata;
         ::vtkSmartPointer<::vtkUnsignedCharArray> m_pPoints_colors;
         ::vtkSmartPointer<::vtkActor> m_pPoints_actor;
+
+        // Pose Frustums (represented as pyramids)
+        // Pyramid "width/length" determined by camera intrinsics (focal lengths)
+        std::atomic_bool m_frustumsAdded;
+        std::mutex m_frustums_lock;
+        ::vtkSmartPointer<::vtkPoints> m_pFrustumPoints;
+        std::vector<::vtkSmartPointer<::vtkPyramid>> m_vPyramids;
+        ::vtkSmartPointer<::vtkUnstructuredGrid> m_arrUnstructuredGrid;
+        ::vtkSmartPointer<::vtkActor> m_pFrustums_actor;
 
         // TODO: Remove test code
         ::vtkConeSource* m_pConeSrc;

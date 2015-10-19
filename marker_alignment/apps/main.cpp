@@ -180,6 +180,14 @@ int main(int /*argc*/, char** argv)
             });
     pViewer->MaybeYieldToViewer();
 
+    // TODO: Remove this test code
+    double p0[3] = {1.0, 1.0, 1.0};
+    double p1[3] = {-1.0, 1.0, 1.0};
+    double p2[3] = {-1.0, -1.0, 1.0};
+    double p3[3] = {1.0, -1.0, 1.0};
+    double p4[3] = {0.0, 0.0, 0.0};
+    pViewer->AddFrustum(p4, p0, p1, p2, p3);
+    pViewer->MaybeYieldToViewer();
 
     // Setup dictionaries to look up poses/lidar markers by ids
     std::map<int, LidarMarker> lidarMarkers_dict;

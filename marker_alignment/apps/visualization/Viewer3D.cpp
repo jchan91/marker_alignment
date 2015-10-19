@@ -5,9 +5,12 @@
 
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkCommand.h>
-#include <vtkCellArray.h>
 #include <vtkProperty.h>
 #include <vtkPointData.h>
+
+#include <vtkDataSetMapper.h>
+#include <vtkCamera.h>
+
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -122,6 +125,14 @@ namespace G2D
           pMapper->SetInputData(pPolyData);
         #endif
     }
+    void Viewer3D::DataSetMapperSetDataSet(::vtkDataSetMapper* pMapper, ::vtkDataSet* pDataSet)
+    {
+        #if VTK_MAJOR_VERSION <= 5
+          pMapper->SetInput(ug);
+        #else
+          pMapper->SetInputData(pDataSet);
+        #endif
+    }
 
     void Viewer3D::SetupVtkColoredPoints()
     {
@@ -158,6 +169,27 @@ namespace G2D
         m_pRenderer->AddActor(actor);
     }
 
+    void Viewer3D::SetupVtkPoseFrustums()
+    {
+        m_pFrustumPoints = vtkSmartPointer<vtkPoints>::New();
+
+        m_arrUnstructuredGrid = vtkSmartPointer<vtkUnstructuredGrid>::New();
+
+        //Create an actor and mapper
+        vtkSmartPointer<vtkDataSetMapper> mapper =
+            vtkSmartPointer<vtkDataSetMapper>::New();
+        DataSetMapperSetDataSet(mapper, m_arrUnstructuredGrid);
+
+        m_pFrustums_actor = vtkSmartPointer<vtkActor>::New();
+        m_pFrustums_actor->SetMapper(mapper);
+
+        // Generate a wireframe
+        m_pFrustums_actor->GetProperty()->SetRepresentationToWireframe();
+
+        //Create a renderer, render window, and interactor
+        m_pRenderer->AddActor(m_pFrustums_actor);
+    }
+
     void Viewer3D::InitializeAndRun()
     {
         // Create render/window/interactor
@@ -173,6 +205,9 @@ namespace G2D
 
         // Add points
         SetupVtkColoredPoints();
+
+        // Add frustums
+        SetupVtkPoseFrustums();
 
         // TODO: Remove this test code
         // Create a cone
@@ -336,6 +371,13 @@ namespace G2D
                 m_pPoints_filteredPolydata->ShallowCopy(m_pPoints_vertexFilter->GetOutput());
 
                 m_pPoints_filteredPolydata->GetPointData()->SetScalars(m_pPoints_colors);
+
+                // TODO: Verify this variable's usefulness
+                // Set state variable so render loop can be notified
+                if (!m_pointsAdded.load())
+                {
+                    m_pointsAdded.store(true);
+                }
             }
             else
             {
@@ -343,6 +385,63 @@ namespace G2D
             }
         }
 
+        return true;
+    }
+
+    bool Viewer3D::AddFrustum(
+            const double origin[3],
+            const double topRight[3],
+            const double topLeft[3],
+            const double bottomLeft[3],
+            const double bottomRight[3],
+            const ViewerAddOpts* pOpts)
+    {
+        // TODO: Verify the usefulness of ViewerAddOpts
+        Viewer3D::ViewerAddOpts options; // Use initialized defaults
+        if (nullptr != pOpts)
+        {
+            options = *pOpts;
+        }
+
+        {
+            // Scoped RAII lock on points
+            std::lock_guard<std::mutex> lock(m_frustums_lock);
+
+            if (options.NoCopy)
+            {
+                // Add a frustum
+                vtkIdType idOffset = m_pFrustumPoints->GetNumberOfPoints();
+
+                m_pFrustumPoints->InsertNextPoint(topRight);
+                m_pFrustumPoints->InsertNextPoint(topLeft);
+                m_pFrustumPoints->InsertNextPoint(bottomLeft);
+                m_pFrustumPoints->InsertNextPoint(bottomRight);
+                m_pFrustumPoints->InsertNextPoint(origin);
+
+                vtkSmartPointer<vtkPyramid> pyramid =
+                    vtkSmartPointer<vtkPyramid>::New();
+                pyramid->GetPointIds()->SetId(idOffset,idOffset);
+                pyramid->GetPointIds()->SetId(idOffset + 1,idOffset + 1);
+                pyramid->GetPointIds()->SetId(idOffset + 2,idOffset + 2);
+                pyramid->GetPointIds()->SetId(idOffset + 3,idOffset + 3);
+                pyramid->GetPointIds()->SetId(idOffset + 4,idOffset + 4);
+                m_vPyramids.push_back(pyramid);
+
+                m_arrUnstructuredGrid->SetPoints(m_pFrustumPoints);
+                m_arrUnstructuredGrid->InsertNextCell(pyramid->GetCellType(),pyramid->GetPointIds());
+
+                // TODO: Verify this variable's usefulness
+                // Set state variable so render loop can be notified
+                if (!m_frustumsAdded.load())
+                {
+                    m_frustumsAdded.store(true);
+                }
+            }
+            else
+            {
+                throw new std::exception();
+            }
+        }
 
         return true;
     }
