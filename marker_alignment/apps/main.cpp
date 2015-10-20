@@ -142,6 +142,7 @@ int main(int /*argc*/, char** argv)
             gt_solution,
             spIntrinsics.get());
 
+    // Render the LIDAR point cloud
     {
         size_t i = 0;
         pViewer->AddPoints(
@@ -157,36 +158,13 @@ int main(int /*argc*/, char** argv)
                      return true;
                  });
     }
-    pViewer->MaybeYieldToViewer();
 
-    // TODO: Remove this test code
-    std::vector<Eigen::Vector3d> randPts;
-    randPts.push_back(Eigen::Vector3d(1.0, 1.0, 0.0));
-    randPts.push_back(Eigen::Vector3d(0.0, 1.0, 0.0));
-    randPts.push_back(Eigen::Vector3d(1.0, 0.0, 0.0));
-    randPts.push_back(Eigen::Vector3d(0.0, 0.0, 0.0));
-    size_t j = 0;
-    pViewer->AddPoints(
-            [&](Eigen::Vector3d & pt, G2D::ViewerColor & color) -> bool
-            {
-                if (j >= randPts.size())
-                    return false;
-
-                pt = randPts[j];
-                color = G2D::ViewerColors::Red;
-                ++j;
-
-                return true;
-            });
-    pViewer->MaybeYieldToViewer();
-
-    // TODO: Remove this test code
-    double p0[3] = {1.0, 1.0, 1.0};
-    double p1[3] = {-1.0, 1.0, 1.0};
-    double p2[3] = {-1.0, -1.0, 1.0};
-    double p3[3] = {1.0, -1.0, 1.0};
-    double p4[3] = {0.0, 0.0, 0.0};
-    pViewer->AddFrustum(p4, p0, p1, p2, p3);
+    // Render the first pose of the camera
+    Eigen::Matrix3d rotation = poses[0].pose->rotation().toRotationMatrix();
+    pViewer->AddFrustum(
+            { 0.0, 0.0, 0.0 },
+            rotation,
+            poses[0].pose->translation());
     pViewer->MaybeYieldToViewer();
 
     // Setup dictionaries to look up poses/lidar markers by ids

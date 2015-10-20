@@ -64,13 +64,33 @@ namespace G2D
 
         // Description:
         // Adds a pyramid to the scene. Useful for representing a camera pose
+        // @ret Returns the ID of a frustum, which can be used later to identify it
         bool AddFrustum(
                 const double origin[3],
                 const double topRight[3],
                 const double topLeft[3],
                 const double bottomLeft[3],
-                const double bottomRight[3],
-                const ViewerAddOpts* pOpts = nullptr);
+                const double bottomRight[3]);
+
+        // Description:
+        // Given an origin, and the affine transform representing the pose of the frustum centered at
+        // origin. Assumes LH, and frustum direction is [0,0,1], and gets transformed from world2frustum
+        // by R|t.
+        // @param R is a column-major rotation matrix.
+        bool AddFrustum(
+                const double origin[3],
+                const double R[9],
+                const double t[3]);
+
+        // Description:
+        // Given an origin, and the affine transform representing the pose of the frustum centered at
+        // origin. Assumes LH, and frustum direction is [0,0,1], and gets transformed from world2frustum
+        // by R|t.
+        // @param R is a column-major rotation matrix.
+        bool AddFrustum(
+                const Eigen::Vector3d & origin,
+                const Eigen::Matrix<double,3,3,Eigen::ColMajor> & R,
+                const Eigen::Vector3d & t);
 
     private:
         // Description:

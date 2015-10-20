@@ -393,56 +393,91 @@ namespace G2D
             const double topRight[3],
             const double topLeft[3],
             const double bottomLeft[3],
-            const double bottomRight[3],
-            const ViewerAddOpts* pOpts)
+            const double bottomRight[3])
     {
-        // TODO: Verify the usefulness of ViewerAddOpts
-        Viewer3D::ViewerAddOpts options; // Use initialized defaults
-        if (nullptr != pOpts)
-        {
-            options = *pOpts;
-        }
-
         {
             // Scoped RAII lock on points
             std::lock_guard<std::mutex> lock(m_frustums_lock);
 
-            if (options.NoCopy)
+            // Add a frustum
+
+            // Insert the point locations of the vertices of the pyramid
+            ::vtkIdType tR_id = m_pFrustumPoints->InsertNextPoint(topRight);
+            ::vtkIdType tL_id = m_pFrustumPoints->InsertNextPoint(topLeft);
+            ::vtkIdType bL_id = m_pFrustumPoints->InsertNextPoint(bottomLeft);
+            ::vtkIdType bR_id = m_pFrustumPoints->InsertNextPoint(bottomRight);
+            ::vtkIdType or_id = m_pFrustumPoints->InsertNextPoint(origin);
+
+            m_pFrustumPoints->Modified();
+
+            vtkSmartPointer<vtkPyramid> pyramid =
+                vtkSmartPointer<vtkPyramid>::New();
+            // Point the pyramid vertex IDs to the points IDs they correspond to
+            pyramid->GetPointIds()->SetId(0,tR_id);
+            pyramid->GetPointIds()->SetId(1,tL_id);
+            pyramid->GetPointIds()->SetId(2,bL_id);
+            pyramid->GetPointIds()->SetId(3,bR_id);
+            pyramid->GetPointIds()->SetId(4,or_id);
+            m_vPyramids.push_back(pyramid);
+
+            m_arrUnstructuredGrid->SetPoints(m_pFrustumPoints);
+            m_arrUnstructuredGrid->InsertNextCell(pyramid->GetCellType(),pyramid->GetPointIds());
+
+            m_arrUnstructuredGrid->Modified();
+
+            // TODO: Verify this variable's usefulness
+            // Set state variable so render loop can be notified
+            if (!m_frustumsAdded.load())
             {
-                // Add a frustum
-                vtkIdType idOffset = m_pFrustumPoints->GetNumberOfPoints();
-
-                m_pFrustumPoints->InsertNextPoint(topRight);
-                m_pFrustumPoints->InsertNextPoint(topLeft);
-                m_pFrustumPoints->InsertNextPoint(bottomLeft);
-                m_pFrustumPoints->InsertNextPoint(bottomRight);
-                m_pFrustumPoints->InsertNextPoint(origin);
-
-                vtkSmartPointer<vtkPyramid> pyramid =
-                    vtkSmartPointer<vtkPyramid>::New();
-                pyramid->GetPointIds()->SetId(idOffset,idOffset);
-                pyramid->GetPointIds()->SetId(idOffset + 1,idOffset + 1);
-                pyramid->GetPointIds()->SetId(idOffset + 2,idOffset + 2);
-                pyramid->GetPointIds()->SetId(idOffset + 3,idOffset + 3);
-                pyramid->GetPointIds()->SetId(idOffset + 4,idOffset + 4);
-                m_vPyramids.push_back(pyramid);
-
-                m_arrUnstructuredGrid->SetPoints(m_pFrustumPoints);
-                m_arrUnstructuredGrid->InsertNextCell(pyramid->GetCellType(),pyramid->GetPointIds());
-
-                // TODO: Verify this variable's usefulness
-                // Set state variable so render loop can be notified
-                if (!m_frustumsAdded.load())
-                {
-                    m_frustumsAdded.store(true);
-                }
-            }
-            else
-            {
-                throw new std::exception();
+                m_frustumsAdded.store(true);
             }
         }
 
         return true;
+    }
+
+    bool Viewer3D::AddFrustum(
+            const double origin[3],
+            const double R[9],
+            const double t[3])
+    {
+
+        return this->AddFrustum(
+                Eigen::Vector3d(origin),
+                Eigen::Matrix<double,3,3,Eigen::ColMajor>(R),
+                Eigen::Vector3d(t));
+    }
+
+    bool Viewer3D::AddFrustum(
+            const Eigen::Vector3d & origin,
+            const Eigen::Matrix<double,3,3,Eigen::ColMajor> & R,
+            const Eigen::Vector3d & t)
+    {
+        // Apply affine transform, R|t to the frustum first
+        // Assume frustum points towards (0,0,1) in a LH coordinate system
+        // Assume R is row-major
+        std::vector<Eigen::Vector3d> frustum;
+        frustum.push_back(Eigen::Vector3d(1.0, 1.0, 1.0));
+        frustum.push_back(Eigen::Vector3d(-1.0, 1.0, 1.0));
+        frustum.push_back(Eigen::Vector3d(-1.0, -1.0, 1.0));
+        frustum.push_back(Eigen::Vector3d(1.0, -1.0, 1.0));
+        frustum.push_back(origin);
+
+        double scaleFrustum = 1.0 / 3.0; // Scales the size of the frustum
+
+        for (size_t i = 0; i < frustum.size(); i++)
+        {
+            // y = R*x + t
+            Eigen::Vector3d x = scaleFrustum * frustum[i];
+            Eigen::Vector3d y = (R * x) + t;
+            frustum[i] = y;
+        }
+
+        return this->AddFrustum(
+                frustum[0].data(),
+                frustum[1].data(),
+                frustum[2].data(),
+                frustum[3].data(),
+                frustum[4].data());
     }
 }
