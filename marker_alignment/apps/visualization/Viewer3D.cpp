@@ -480,6 +480,14 @@ namespace G2D
     }
 
     bool Viewer3D::AddFrustum(
+            const Eigen::Vector4d & quaternion,
+            const Eigen::Vector3d & t)
+    {
+        Eigen::Quaterniond q(quaternion);
+        return this->AddFrustum(q, t);
+    }
+
+    bool Viewer3D::AddFrustum(
             const Eigen::Matrix<double,3,3,Eigen::ColMajor> & R,
             const Eigen::Vector3d & t)
     {

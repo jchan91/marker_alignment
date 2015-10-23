@@ -78,6 +78,10 @@ namespace G2D
                 const Eigen::Vector3d & t);
 
         bool AddFrustum(
+                const Eigen::Vector4d & quaternion,
+                const Eigen::Vector3d & t);
+
+        bool AddFrustum(
                 const Eigen::Matrix<double,3,3,Eigen::ColMajor> & R,
                 const Eigen::Vector3d & t);
 

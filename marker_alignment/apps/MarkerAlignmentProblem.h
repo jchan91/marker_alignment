@@ -57,7 +57,7 @@ namespace G2D
 
             Eigen::Quaterniond q(m_solution_r);
 
-            printf("Q: %f %f %f %f\n", q.x(), q.y(), q.z(), q.w());
+            printf("Q: x=%f y=%f z=%f w=%f\n", q.x(), q.y(), q.z(), q.w());
             printf("t: %f %f %f\n", m_solution_t[0], m_solution_t[1], m_solution_t[2]);
 
             m_pViewer->AddFrustum(q, m_solution_t);

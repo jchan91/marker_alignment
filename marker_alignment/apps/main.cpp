@@ -180,15 +180,17 @@ int main(int /*argc*/, char** argv)
     }
 
     // Setup the initial guess
-    SE3Quat solution_init_guess;
-    Eigen::Quaterniond solution_init_guess_q = solution_init_guess.rotation();
-    Eigen::Vector3d solution_init_guess_t = solution_init_guess.translation();
-    Eigen::Vector3d solution_t = solution_init_guess_t;
+    Eigen::Vector3d solution_t(poses[0].pose->translation());
     Eigen::Vector4d solution_r;
-    solution_r[0] = solution_init_guess_q.w();
-    solution_r[1] = solution_init_guess_q.x();
-    solution_r[2] = solution_init_guess_q.y();
-    solution_r[3] = solution_init_guess_q.z();
+    solution_r[0] = 0.0; // x
+    solution_r[1] = 0.0; // y
+    solution_r[2] = 0.0; // z
+    solution_r[3] = 1.0; // w
+
+    // Render the initial guess
+    std::cerr << "Rendering initial guess" << std::endl;
+    pViewer->AddFrustum(solution_r, solution_t);
+    pViewer->MaybeYieldToViewer();
 
     // Setup the solver
     // Add a residual block for every pose that has an observation
@@ -314,6 +316,7 @@ int main(int /*argc*/, char** argv)
 //
 //    }
 
+    std::cerr << "Press space to finish" << std::endl;
     pViewer->MaybeYieldToViewer();
 
 	return 0;
