@@ -22,12 +22,56 @@
 #include "CameraIntrinsics.h"
 #include "MockData.h"
 
+#include "Viewer3D.h"
+
 #ifndef DEBUG
 #define DEBUG 1
 #endif
 
 namespace G2D
 {
+
+    // Class for Ceres to call after each iteration. Useful for things like viz
+    class ItrCallback : public ceres::IterationCallback
+    {
+    public:
+        ItrCallback(
+                G2D::Viewer3D* pViewer,
+                const Eigen::Vector4d & solution_r,
+                const Eigen::Vector3d & solution_t) :
+            m_pViewer(pViewer),
+            m_solution_r(solution_r),
+            m_solution_t(solution_t)
+        {
+            if (nullptr == pViewer)
+            {
+                // Warn
+                std::cerr << "[WARNING] ItrCallback: Viewer shouldn't be null!" << std::endl;
+            }
+        }
+
+        virtual ceres::CallbackReturnType operator()(
+                const ceres::IterationSummary& summary)
+        {
+            std::cerr << "Iteration callback" << std::endl;
+
+            Eigen::Quaterniond q(m_solution_r);
+
+            printf("Q: %f %f %f %f\n", q.x(), q.y(), q.z(), q.w());
+            printf("t: %f %f %f\n", m_solution_t[0], m_solution_t[1], m_solution_t[2]);
+
+            m_pViewer->AddFrustum(q, m_solution_t);
+            m_pViewer->MaybeYieldToViewer();
+
+            return ceres::SOLVER_CONTINUE;
+        }
+
+    private:
+        G2D::Viewer3D* m_pViewer;
+        const Eigen::Vector4d & m_solution_r;
+        const Eigen::Vector3d & m_solution_t;
+    };
+
     struct QuaternionPlus
     {
         template <typename T>
@@ -63,16 +107,18 @@ namespace G2D
     {
         // Use Eigen constructor to generate 16-byte aligned ptrs
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-        
+
         LidarReprojectionError(
             Eigen::Vector2d observedMarker,
             Eigen::Vector3d lidarMarker,
             std::shared_ptr<G2D::SE3Quat> pRig2World,
-            const ProjModel* pIntrinsics) :
+            const ProjModel* pIntrinsics,
+            G2D::Viewer3D* pViewer = nullptr) :
                 m_observedMarker(observedMarker),
                 m_lidarMarker(lidarMarker),
                 m_pRig2World(pRig2World),
-                m_pIntrinsics(pIntrinsics)
+                m_pIntrinsics(pIntrinsics),
+                m_pViewer(pViewer)
         {
             G2D::SE3Quat w2r = m_pRig2World->inverse();
             Eigen::Quaterniond pose_q = w2r.rotation();
@@ -132,10 +178,10 @@ namespace G2D
             pixel[0] = uv[0] * (T)width;
             pixel[1] = uv[1] * (T)height;
 
-            Eigen::Matrix<T, 2, 1> m_observedMarker_t = m_observedMarker.cast<T>();
+            Eigen::Matrix<T, 2, 1> observedMarker_t = m_observedMarker.cast<T>();
 
-            residuals[0] = m_observedMarker_t.data()[0] - pixel[0];
-            residuals[1] = m_observedMarker_t.data()[1] - pixel[1];
+            residuals[0] = observedMarker_t.data()[0] - pixel[0];
+            residuals[1] = observedMarker_t.data()[1] - pixel[1];
 
     #ifdef DEBUG
             T l_pos_w[3];
@@ -158,6 +204,8 @@ namespace G2D
         Eigen::Vector4d m_world2rig_q;
         Eigen::Vector3d m_world2rig_t;
         const ProjModel* m_pIntrinsics;
+
+        G2D::Viewer3D* m_pViewer;
     };
 }
 

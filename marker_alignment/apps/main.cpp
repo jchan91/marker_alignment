@@ -201,16 +201,25 @@ int main(int /*argc*/, char** argv)
     {
         LidarObservation &obs = observations[o];
 
+        LidarReprojectionError<LinearCameraIntrinsics>* pProblem =
+                new LidarReprojectionError<LinearCameraIntrinsics>(
+                    obs.uv,
+                    lidarMarkers_dict[obs.marker_id].pos,
+                    poses_dict[obs.frame_id].pose,
+                    spIntrinsics.get());
+
         ceres::CostFunction* cost_function =
                 new ceres::AutoDiffCostFunction<LidarReprojectionError<LinearCameraIntrinsics>, 2, 4, 3>(
-                        new LidarReprojectionError<LinearCameraIntrinsics>(
-                        obs.uv,
-                        lidarMarkers_dict[obs.marker_id].pos,
-                        poses_dict[obs.frame_id].pose,
-                        spIntrinsics.get()));
+                        pProblem);
         problem.AddResidualBlock(cost_function, NULL, solution_r.data(), solution_t.data());
         problem.SetParameterization(solution_r.data(), quat_plus);
     }
+
+    // Create a callback for visualization
+    G2D::ItrCallback callback(
+            pViewer,
+            solution_r,
+            solution_t);
 
     // Run the solver!
     ceres::Solver::Options options;
@@ -221,6 +230,8 @@ int main(int /*argc*/, char** argv)
     options.update_state_every_iteration = true;
     options.gradient_tolerance = 1e-16;
     options.function_tolerance = 1e-16;
+
+    options.callbacks.push_back(&callback);
 
     // Initialized residuals/jacobians
     ceres::Problem::EvaluateOptions evaluateOptions;
@@ -302,6 +313,8 @@ int main(int /*argc*/, char** argv)
 //    {
 //
 //    }
+
+    pViewer->MaybeYieldToViewer();
 
 	return 0;
 }
