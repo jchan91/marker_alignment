@@ -9,6 +9,7 @@
 // For Frustums
 #include <vtkDataSetMapper.h>
 #include <vtkCamera.h>
+#include <vtkConeSource.h>
 
 // For Axes
 #include <vtkAxesActor.h>
@@ -382,7 +383,8 @@ namespace G2D
             const double topRight[3],
             const double topLeft[3],
             const double bottomLeft[3],
-            const double bottomRight[3])
+            const double bottomRight[3],
+            const double downVector[3])
     {
         {
             // Scoped RAII lock on points
@@ -413,6 +415,39 @@ namespace G2D
             m_arrUnstructuredGrid->InsertNextCell(pyramid->GetCellType(),pyramid->GetPointIds());
 
             m_arrUnstructuredGrid->Modified();
+
+            // Also add a cone to represent the "down" vector of a frustum
+            if (nullptr != downVector)
+            {
+                //Create a cone
+                vtkSmartPointer<vtkConeSource> coneSource =
+                  vtkSmartPointer<vtkConeSource>::New();
+
+                coneSource->SetRadius(0.02);
+                double height = 0.5;
+                coneSource->SetHeight(height);
+                coneSource->SetDirection(
+                        downVector[0],
+                        downVector[1],
+                        downVector[2]);
+                coneSource->SetCenter(
+                        origin[0] + (0.5 * height * downVector[0]),
+                        origin[1] + (0.5 * height * downVector[1]),
+                        origin[2] + (0.5 * height * downVector[2]));
+
+                coneSource->Update();
+
+                //Create a mapper and actor
+                vtkSmartPointer<vtkPolyDataMapper> mapper =
+                  vtkSmartPointer<vtkPolyDataMapper>::New();
+                mapper->SetInputConnection(coneSource->GetOutputPort());
+
+                vtkSmartPointer<vtkActor> actor =
+                  vtkSmartPointer<vtkActor>::New();
+                actor->SetMapper(mapper);
+
+                m_pRenderer->AddActor(actor);
+            }
 
             // TODO: Verify this variable's usefulness
             // Set state variable so render loop can be notified
@@ -468,11 +503,16 @@ namespace G2D
             frustum[i] = y;
         }
 
+        // Add a down vector
+        Eigen::Vector3d downVector(0.0, -1.0, 0.0);
+        downVector = R * downVector;
+
         return this->AddFrustum(
                 frustum[0].data(),
                 frustum[1].data(),
                 frustum[2].data(),
                 frustum[3].data(),
-                frustum[4].data());
+                frustum[4].data(),
+                downVector.data());
     }
 }

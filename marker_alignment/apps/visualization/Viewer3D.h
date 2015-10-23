@@ -17,7 +17,6 @@
 #include <vtkRenderWindow.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindowInteractor.h>
-#include <vtkConeSource.h>
 #include <vtkSmartPointer.h>
 #include <vtkPoints.h>
 #include <vtkVertexGlyphFilter.h>
@@ -62,7 +61,8 @@ namespace G2D
                 const double topRight[3],
                 const double topLeft[3],
                 const double bottomLeft[3],
-                const double bottomRight[3]);
+                const double bottomRight[3],
+                const double downVector[3] = nullptr);
 
         // Description:
         // Given an origin, and the affine transform representing the pose of the frustum centered at
@@ -152,8 +152,5 @@ namespace G2D
         std::vector<::vtkSmartPointer<::vtkPyramid>> m_vPyramids;
         ::vtkSmartPointer<::vtkUnstructuredGrid> m_arrUnstructuredGrid;
         ::vtkSmartPointer<::vtkActor> m_pFrustums_actor;
-
-        // TODO: Remove test code
-        ::vtkConeSource* m_pConeSrc;
     };
 }
