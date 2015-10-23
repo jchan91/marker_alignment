@@ -49,19 +49,10 @@ namespace G2D
         void Pause();
         void Step();
 
-        // TODO: Do we really need this?
-        struct ViewerAddOpts
-        {
-            bool NoCopy = true; // True: Dereference that pointer only, don't make copy of data
-            bool Blocking = false; // True: Block until points added // TODO: Implement this feature
-        };
-
         // Description:
         // Adds 3D points to be rendered in the paritcular color.
         // GetNextPoint is a user defined callback to retrieve the next point and its associated color
-        bool AddPoints(
-                std::function<bool(Eigen::Vector3d &, G2D::ViewerColor &)> GetNextPoint,
-                const ViewerAddOpts* pOpts = nullptr);
+        bool AddPoints(std::function<bool(Eigen::Vector3d &, G2D::ViewerColor &)> GetNextPoint);
 
         // Description:
         // Adds a pyramid to the scene. Useful for representing a camera pose
@@ -124,6 +115,10 @@ namespace G2D
         // Helper initializer meant for the Viewer ctor. Sets up the associated vtk variables
         // to display pyramids that represent the camera pose, and FOV (estimate)
         void SetupVtkPoseFrustums();
+
+        // Description:
+        // Helper to create an xyz axis to help user comprehend orientation
+        void SetupAxes();
 
         // VTK Renderer/Windows
         ::vtkRenderer* m_pRenderer;

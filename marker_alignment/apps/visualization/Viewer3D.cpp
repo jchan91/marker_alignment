@@ -1,16 +1,17 @@
 #include "Viewer3D.h"
 
-// TODO: Remove conesource
-#include <vtkConeSource.h>
-
+// For Colored points
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkCommand.h>
 #include <vtkProperty.h>
 #include <vtkPointData.h>
 
+// For Frustums
 #include <vtkDataSetMapper.h>
 #include <vtkCamera.h>
 
+// For Axes
+#include <vtkAxesActor.h>
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -190,6 +191,16 @@ namespace G2D
         m_pRenderer->AddActor(m_pFrustums_actor);
     }
 
+    void Viewer3D::SetupAxes()
+    {
+          vtkSmartPointer<vtkAxesActor> axes =
+            vtkSmartPointer<vtkAxesActor>::New();
+
+          axes->SetNormalizedShaftLength(10, 10, 10);
+
+          m_pRenderer->AddActor(axes);
+    }
+
     void Viewer3D::InitializeAndRun()
     {
         // Create render/window/interactor
@@ -203,22 +214,14 @@ namespace G2D
 
         // Create the "actors" (e.g. point clouds, pose frustums, etc.)
 
+        // Add an axes for orientation
+        SetupAxes();
+
         // Add points
         SetupVtkColoredPoints();
 
         // Add frustums
         SetupVtkPoseFrustums();
-
-        // TODO: Remove this test code
-        // Create a cone
-//        m_pConeSrc = ::vtkConeSource::New();
-//        m_pConeSrc->SetResolution(8);
-//        ::vtkPolyDataMapper* pMapper = ::vtkPolyDataMapper::New();
-//        pMapper->SetInput(m_pConeSrc->GetOutput());
-//        ::vtkActor* pActor = ::vtkActor::New();
-//        pActor->SetMapper(pMapper);
-//        // Set the actor into the scene
-//        m_pRenderer->AddActor(pActor);
 
         // Make the vtkRenderWindowInteractor poll Viewer3D for updates
         // Do so by creating a periodic timer event, and make Viewer3D's
@@ -233,7 +236,7 @@ namespace G2D
                 ::vtkCommand::TimerEvent,
                 pCallback);
         // Fire every 100 ms
-        m_pRenderWindowInteractor->CreateRepeatingTimer(100); 
+        m_pRenderWindowInteractor->CreateRepeatingTimer(100);
 
         // Set a callback for keyboard commands
         vtkSmartPointer<KeyPressInteractorStyle> style =
@@ -325,63 +328,49 @@ namespace G2D
     bool Viewer3D::AddPoints(
         std::function<bool(
                 Eigen::Vector3d &,
-                G2D::ViewerColor &)> GetNextPoint,
-        const ViewerAddOpts* pOpts)
+                G2D::ViewerColor &)> GetNextPoint)
     {
-        Viewer3D::ViewerAddOpts options; // Use initialized defaults
-        if (nullptr != pOpts)
-        {
-            options = *pOpts;
-        }
-
         {
             // Scoped RAII lock on points
             std::lock_guard<std::mutex> lock(m_points_lock);
 
-            if (options.NoCopy)
+            // Allocate colors array
+            Eigen::Vector3d pt_eigen;
+            G2D::ViewerColor color;
+            while (GetNextPoint(pt_eigen, color))
             {
-                // Allocate colors array
-                Eigen::Vector3d pt_eigen;
-                G2D::ViewerColor color;
-                while (GetNextPoint(pt_eigen, color))
-                {
-                    // Insert new points
-                    m_pPoints->InsertNextPoint(
-                            static_cast<float>(pt_eigen[0]),
-                            static_cast<float>(pt_eigen[1]),
-                            static_cast<float>(pt_eigen[2]));
+                // Insert new points
+                m_pPoints->InsertNextPoint(
+                        static_cast<float>(pt_eigen[0]),
+                        static_cast<float>(pt_eigen[1]),
+                        static_cast<float>(pt_eigen[2]));
 
-                    unsigned char color_uch[3] = {
-                            color.r,
-                            color.g,
-                            color.b
-                    };
-                    m_pPoints_colors->InsertNextTupleValue(color_uch);
-                }
-
-                // Update internal polydata last modified timer
-                m_pPoints->Modified();
-
-                // Set the polydata/device mappers to the new data
-                m_pPoints_polydata->SetPoints(m_pPoints);
-
-                PolydataAlgoSetInputData(m_pPoints_vertexFilter, m_pPoints_polydata);
-                m_pPoints_vertexFilter->Update();
-
-                m_pPoints_filteredPolydata->ShallowCopy(m_pPoints_vertexFilter->GetOutput());
-
-                m_pPoints_filteredPolydata->GetPointData()->SetScalars(m_pPoints_colors);
-
-                // TODO: Verify this variable's usefulness
-                // Set state variable so render loop can be notified
-                if (!m_pointsAdded.load())
-                {
-                    m_pointsAdded.store(true);
-                }
+                unsigned char color_uch[3] = {
+                        color.r,
+                        color.g,
+                        color.b
+                };
+                m_pPoints_colors->InsertNextTupleValue(color_uch);
             }
-            else
+
+            // Update internal polydata last modified timer
+            m_pPoints->Modified();
+
+            // Set the polydata/device mappers to the new data
+            m_pPoints_polydata->SetPoints(m_pPoints);
+
+            PolydataAlgoSetInputData(m_pPoints_vertexFilter, m_pPoints_polydata);
+            m_pPoints_vertexFilter->Update();
+
+            m_pPoints_filteredPolydata->ShallowCopy(m_pPoints_vertexFilter->GetOutput());
+
+            m_pPoints_filteredPolydata->GetPointData()->SetScalars(m_pPoints_colors);
+
+            // TODO: Verify this variable's usefulness
+            // Set state variable so render loop can be notified
+            if (!m_pointsAdded.load())
             {
-                throw new std::exception();
+                m_pointsAdded.store(true);
             }
         }
 
