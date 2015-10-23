@@ -437,19 +437,25 @@ namespace G2D
     }
 
     bool Viewer3D::AddFrustum(
-            const double origin[3],
             const double R[9],
             const double t[3])
     {
 
         return this->AddFrustum(
-                Eigen::Vector3d(origin),
                 Eigen::Matrix<double,3,3,Eigen::ColMajor>(R),
                 Eigen::Vector3d(t));
     }
 
     bool Viewer3D::AddFrustum(
-            const Eigen::Vector3d & origin,
+            const Eigen::Quaterniond & r,
+            const Eigen::Vector3d & t)
+    {
+        return this->AddFrustum(
+                r.toRotationMatrix(),
+                t);
+    }
+
+    bool Viewer3D::AddFrustum(
             const Eigen::Matrix<double,3,3,Eigen::ColMajor> & R,
             const Eigen::Vector3d & t)
     {
@@ -457,11 +463,11 @@ namespace G2D
         // Assume frustum points towards (0,0,1) in a LH coordinate system
         // Assume R is row-major
         std::vector<Eigen::Vector3d> frustum;
+        frustum.push_back(Eigen::Vector3d(0.0, 0.0, 0.0));
         frustum.push_back(Eigen::Vector3d(1.0, 1.0, 1.0));
         frustum.push_back(Eigen::Vector3d(-1.0, 1.0, 1.0));
         frustum.push_back(Eigen::Vector3d(-1.0, -1.0, 1.0));
         frustum.push_back(Eigen::Vector3d(1.0, -1.0, 1.0));
-        frustum.push_back(origin);
 
         double scaleFrustum = 1.0 / 3.0; // Scales the size of the frustum
 

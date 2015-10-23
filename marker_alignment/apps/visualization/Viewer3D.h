@@ -10,6 +10,7 @@
 #include <thread>
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 
 #include <vtkPolyDataMapper.h>
 #include <vtkActor.h>
@@ -78,17 +79,14 @@ namespace G2D
         // by R|t.
         // @param R is a column-major rotation matrix.
         bool AddFrustum(
-                const double origin[3],
                 const double R[9],
                 const double t[3]);
 
-        // Description:
-        // Given an origin, and the affine transform representing the pose of the frustum centered at
-        // origin. Assumes LH, and frustum direction is [0,0,1], and gets transformed from world2frustum
-        // by R|t.
-        // @param R is a column-major rotation matrix.
         bool AddFrustum(
-                const Eigen::Vector3d & origin,
+                const Eigen::Quaterniond & r,
+                const Eigen::Vector3d & t);
+
+        bool AddFrustum(
                 const Eigen::Matrix<double,3,3,Eigen::ColMajor> & R,
                 const Eigen::Vector3d & t);
 

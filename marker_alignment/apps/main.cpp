@@ -160,10 +160,8 @@ int main(int /*argc*/, char** argv)
     }
 
     // Render the first pose of the camera
-    Eigen::Matrix3d rotation = poses[0].pose->rotation().toRotationMatrix();
     pViewer->AddFrustum(
-            { 0.0, 0.0, 0.0 },
-            rotation,
+            poses[0].pose->rotation(),
             poses[0].pose->translation());
     pViewer->MaybeYieldToViewer();
 
