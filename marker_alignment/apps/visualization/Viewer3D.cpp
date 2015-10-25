@@ -106,7 +106,6 @@ namespace G2D
 
     Viewer3D::~Viewer3D()
     {
-        // TODO: Implement something to kill the thread?
         this->Play(); // Notify everybody to just play through
         m_pRenderWindowInteractor->TerminateApp();
     }
@@ -205,7 +204,6 @@ namespace G2D
     void Viewer3D::InitializeAndRun()
     {
         // Create render/window/interactor
-        // TODO: Convert these to smart pointers
         m_pRenderer = ::vtkRenderer::New();
         m_pRenderWindow = ::vtkRenderWindow::New();
         m_pRenderWindow->AddRenderer(m_pRenderer);
