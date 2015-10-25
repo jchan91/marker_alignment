@@ -69,6 +69,7 @@ namespace G2D
             for (unsigned int i = 0; i < m_numPoses; i++)
             {
                 SE3Quat xformedCamera = solution * (*m_pPoses[i].pose);
+                m_pViewer->AddFrustum(xformedCamera.rotation(), xformedCamera.translation());
             }
 
             m_pViewer->MaybeYieldToViewer();
@@ -96,17 +97,17 @@ namespace G2D
             {
                 T norm_delta = sqrt(squared_norm_delta);
                 const T sin_delta_by_delta = sin(norm_delta) / norm_delta;
-                q_delta[0] = cos(norm_delta);
-                q_delta[1] = sin_delta_by_delta * delta[0];
-                q_delta[2] = sin_delta_by_delta * delta[1];
-                q_delta[3] = sin_delta_by_delta * delta[2];
+                q_delta[0] = sin_delta_by_delta * delta[0]; // x
+                q_delta[1] = sin_delta_by_delta * delta[1]; // y
+                q_delta[2] = sin_delta_by_delta * delta[2]; // z
+                q_delta[3] = cos(norm_delta); // w
             }
             else
             {
-                q_delta[0] = T(1.0);
-                q_delta[1] = delta[0];
-                q_delta[2] = delta[1];
-                q_delta[3] = delta[2];
+                q_delta[0] = delta[0]; // x
+                q_delta[1] = delta[1]; // y
+                q_delta[2] = delta[2]; // z
+                q_delta[3] = T(1.0); // w
             }
 
             ceres::QuaternionProduct(q_delta, x, x_plus_delta);
@@ -134,10 +135,10 @@ namespace G2D
         {
             G2D::SE3Quat w2r = m_pRig2World->inverse();
             Eigen::Quaterniond pose_q = w2r.rotation();
-            m_world2rig_q[0] = pose_q.w();
-            m_world2rig_q[1] = pose_q.x();
-            m_world2rig_q[2] = pose_q.y();
-            m_world2rig_q[3] = pose_q.z();
+            m_world2rig_q[0] = pose_q.x();
+            m_world2rig_q[1] = pose_q.y();
+            m_world2rig_q[2] = pose_q.z();
+            m_world2rig_q[3] = pose_q.w();
             m_world2rig_t = w2r.translation();
         }
 
@@ -187,8 +188,8 @@ namespace G2D
             size_t height = m_pIntrinsics->Height();
 
             T pixel[2];
-            pixel[0] = uv[0] * (T)width;
-            pixel[1] = uv[1] * (T)height;
+            pixel[0] = (uv[0]) * (T)width; // Flip both axes because of image vs world axes
+            pixel[1] = (uv[1]) * (T)height; //
 
             Eigen::Matrix<T, 2, 1> observedMarker_t = m_observedMarker.cast<T>();
 

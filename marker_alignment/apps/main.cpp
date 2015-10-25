@@ -249,9 +249,9 @@ int main(int /*argc*/, char** argv)
 
     // Print out evaluate results
     cout << "Residuals:" << endl;
-    for (size_t i = 0; i < residuals.size(); i++)
+    for (size_t i = 0; i < residuals.size(); i+=2)
     {
-        cout << residuals[i] << endl;;
+        cout << (i/2 + 1) << ": " << residuals[i] << " " << residuals[i+1] << endl;
     }
 
     // Optimize away!
