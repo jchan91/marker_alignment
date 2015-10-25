@@ -38,10 +38,14 @@ namespace G2D
         ItrCallback(
                 G2D::Viewer3D* pViewer,
                 const Eigen::Vector4d & solution_r,
-                const Eigen::Vector3d & solution_t) :
+                const Eigen::Vector3d & solution_t,
+                const FramePose* pPoses,
+                const unsigned int numPoses) :
             m_pViewer(pViewer),
             m_solution_r(solution_r),
-            m_solution_t(solution_t)
+            m_solution_t(solution_t),
+            m_pPoses(pPoses),
+            m_numPoses(numPoses)
         {
             if (nullptr == pViewer)
             {
@@ -60,7 +64,13 @@ namespace G2D
             printf("Q: x=%f y=%f z=%f w=%f\n", q.x(), q.y(), q.z(), q.w());
             printf("t: %f %f %f\n", m_solution_t[0], m_solution_t[1], m_solution_t[2]);
 
-            m_pViewer->AddFrustum(q, m_solution_t);
+            G2D::SE3Quat solution(q, m_solution_t);
+            // Transform each pose using the current solution
+            for (unsigned int i = 0; i < m_numPoses; i++)
+            {
+                SE3Quat xformedCamera = solution * (*m_pPoses[i].pose);
+            }
+
             m_pViewer->MaybeYieldToViewer();
 
             return ceres::SOLVER_CONTINUE;
@@ -70,6 +80,8 @@ namespace G2D
         G2D::Viewer3D* m_pViewer;
         const Eigen::Vector4d & m_solution_r;
         const Eigen::Vector3d & m_solution_t;
+        const FramePose* m_pPoses;
+        const unsigned int m_numPoses;
     };
 
     struct QuaternionPlus

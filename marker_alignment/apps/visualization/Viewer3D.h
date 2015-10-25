@@ -53,6 +53,8 @@ namespace G2D
         // GetNextPoint is a user defined callback to retrieve the next point and its associated color
         bool AddPoints(std::function<bool(Eigen::Vector3d &, G2D::ViewerColor &)> GetNextPoint);
 
+        bool AddPoints(const std::vector<Eigen::Vector3d> & points, const G2D::ViewerColor & color);
+
         // Description:
         // Adds a pyramid to the scene. Useful for representing a camera pose
         // @ret Returns the ID of a frustum, which can be used later to identify it

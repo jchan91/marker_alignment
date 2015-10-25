@@ -246,6 +246,10 @@ namespace G2D
         m_pRenderWindowInteractor->SetInteractorStyle(style);
         style->SetCurrentRenderer(m_pRenderer);
 
+        // Set some defaults on the render window
+        m_pRenderWindow->SetSize(900, 900);
+        m_pRenderWindow->SetPosition(900, 0);
+
         // Start Render
         m_pRenderWindow->Render();
 
@@ -376,6 +380,25 @@ namespace G2D
         }
 
         return true;
+    }
+
+    bool Viewer3D::AddPoints(
+            const std::vector<Eigen::Vector3d> & points,
+            const G2D::ViewerColor & color)
+    {
+        size_t i = 0;
+        AddPoints(
+             [&](Eigen::Vector3d & pt, G2D::ViewerColor & c) -> bool
+             {
+                 if (i >= points.size())
+                     return false;
+
+                 pt = points[i];
+                 c = color;
+                 ++i;
+
+                 return true;
+             });
     }
 
     bool Viewer3D::AddFrustum(

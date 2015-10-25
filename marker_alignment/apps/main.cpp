@@ -159,12 +159,6 @@ int main(int /*argc*/, char** argv)
                  });
     }
 
-    // Render the first pose of the camera
-    pViewer->AddFrustum(
-            poses[0].pose->rotation(),
-            poses[0].pose->translation());
-    pViewer->MaybeYieldToViewer();
-
     // Setup dictionaries to look up poses/lidar markers by ids
     std::map<int, LidarMarker> lidarMarkers_dict;
     std::map<int, FramePose> poses_dict;
@@ -180,7 +174,7 @@ int main(int /*argc*/, char** argv)
     }
 
     // Setup the initial guess
-    Eigen::Vector3d solution_t(poses[0].pose->translation());
+    Eigen::Vector3d solution_t;
     Eigen::Vector4d solution_r;
     solution_r[0] = 0.0; // x
     solution_r[1] = 0.0; // y
@@ -189,7 +183,12 @@ int main(int /*argc*/, char** argv)
 
     // Render the initial guess
     std::cerr << "Rendering initial guess" << std::endl;
-    pViewer->AddFrustum(solution_r, solution_t);
+    for (size_t i = 0; i < poses.size(); i++)
+    {
+        SE3Quat currentSolution(Eigen::Quaterniond(solution_r), solution_t);
+        SE3Quat xformedPose = currentSolution * (*poses[i].pose);
+        pViewer->AddFrustum(xformedPose.rotation(), xformedPose.translation());
+    }
     pViewer->MaybeYieldToViewer();
 
     // Setup the solver
@@ -221,7 +220,9 @@ int main(int /*argc*/, char** argv)
     G2D::ItrCallback callback(
             pViewer,
             solution_r,
-            solution_t);
+            solution_t,
+            poses.data(),
+            static_cast<unsigned int>(poses.size()));
 
     // Run the solver!
     ceres::Solver::Options options;
