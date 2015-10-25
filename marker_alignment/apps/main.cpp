@@ -17,6 +17,7 @@
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>
+#include <Eigen/StdVector>
 
 #include "glog/logging.h"
 #include "ceres/ceres.h"
@@ -78,7 +79,8 @@ void CeresSolver()
 
 template <typename ProjModel>
 void GetMockData(
-        vector<LidarObservation> &observations,
+        vector<LidarObservation,
+               Eigen::aligned_allocator<LidarObservation>> &observations,
         vector<LidarMarker> &lidarMarkers,
         vector<FramePose> &poses,
         SE3Quat &solution,
@@ -118,11 +120,12 @@ int main(int /*argc*/, char** argv)
 {
     google::InitGoogleLogging(argv[0]);
 
-
     G2D::Viewer3D* pViewer = new G2D::Viewer3D();
-    pViewer->RunAsync();
+    pViewer->InitializeAndRunAsync();
+    pViewer->MaybeYieldToViewer();
 
-    vector<LidarObservation> observations;
+    vector<LidarObservation,
+           Eigen::aligned_allocator<LidarObservation>> observations;
     vector<LidarMarker> lidarMarkers;
     vector<FramePose> poses;
     shared_ptr<LinearCameraIntrinsics> spIntrinsics;
@@ -132,7 +135,29 @@ int main(int /*argc*/, char** argv)
     LinearCameraIntrinsics* pIntrinsics = nullptr;
     CreateMockCameraIntrinsics<LinearCameraIntrinsics>(&pIntrinsics);
     spIntrinsics.reset(pIntrinsics);
-    GetMockData<LinearCameraIntrinsics>(observations, lidarMarkers, poses, gt_solution, spIntrinsics.get());
+    GetMockData<LinearCameraIntrinsics>(
+            observations,
+            lidarMarkers,
+            poses,
+            gt_solution,
+            spIntrinsics.get());
+
+    // Render the LIDAR point cloud
+    {
+        size_t i = 0;
+        pViewer->AddPoints(
+                 [&](Eigen::Vector3d & pt, G2D::ViewerColor & color) -> bool
+                 {
+                     if (i >= lidarMarkers.size())
+                         return false;
+
+                     pt = lidarMarkers[i].pos;
+                     color = G2D::ViewerColors::Banana;
+                     ++i;
+
+                     return true;
+                 });
+    }
 
     // Setup dictionaries to look up poses/lidar markers by ids
     std::map<int, LidarMarker> lidarMarkers_dict;
@@ -149,15 +174,22 @@ int main(int /*argc*/, char** argv)
     }
 
     // Setup the initial guess
-    SE3Quat solution_init_guess;
-    Eigen::Quaterniond solution_init_guess_q = solution_init_guess.rotation();
-    Eigen::Vector3d solution_init_guess_t = solution_init_guess.translation();
-    Eigen::Vector3d solution_t = solution_init_guess_t;
+    Eigen::Vector3d solution_t;
     Eigen::Vector4d solution_r;
-    solution_r[0] = solution_init_guess_q.w();
-    solution_r[1] = solution_init_guess_q.x();
-    solution_r[2] = solution_init_guess_q.y();
-    solution_r[3] = solution_init_guess_q.z();
+    solution_r[0] = 0.0; // x
+    solution_r[1] = 0.0; // y
+    solution_r[2] = 0.0; // z
+    solution_r[3] = 1.0; // w
+
+    // Render the initial guess
+    std::cerr << "Rendering initial guess" << std::endl;
+    for (size_t i = 0; i < poses.size(); i++)
+    {
+        SE3Quat currentSolution(Eigen::Quaterniond(solution_r), solution_t);
+        SE3Quat xformedPose = currentSolution * (*poses[i].pose);
+        pViewer->AddFrustum(xformedPose.rotation(), xformedPose.translation());
+    }
+    pViewer->MaybeYieldToViewer();
 
     // Setup the solver
     // Add a residual block for every pose that has an observation
@@ -170,16 +202,27 @@ int main(int /*argc*/, char** argv)
     {
         LidarObservation &obs = observations[o];
 
+        LidarReprojectionError<LinearCameraIntrinsics>* pProblem =
+                new LidarReprojectionError<LinearCameraIntrinsics>(
+                    obs.uv,
+                    lidarMarkers_dict[obs.marker_id].pos,
+                    poses_dict[obs.frame_id].pose,
+                    spIntrinsics.get());
+
         ceres::CostFunction* cost_function =
                 new ceres::AutoDiffCostFunction<LidarReprojectionError<LinearCameraIntrinsics>, 2, 4, 3>(
-                        new LidarReprojectionError<LinearCameraIntrinsics>(
-                        obs.uv,
-                        lidarMarkers_dict[obs.marker_id].pos,
-                        poses_dict[obs.frame_id].pose,
-                        spIntrinsics.get()));
+                        pProblem);
         problem.AddResidualBlock(cost_function, NULL, solution_r.data(), solution_t.data());
         problem.SetParameterization(solution_r.data(), quat_plus);
     }
+
+    // Create a callback for visualization
+    G2D::ItrCallback callback(
+            pViewer,
+            solution_r,
+            solution_t,
+            poses.data(),
+            static_cast<unsigned int>(poses.size()));
 
     // Run the solver!
     ceres::Solver::Options options;
@@ -190,6 +233,8 @@ int main(int /*argc*/, char** argv)
     options.update_state_every_iteration = true;
     options.gradient_tolerance = 1e-16;
     options.function_tolerance = 1e-16;
+
+    options.callbacks.push_back(&callback);
 
     // Initialized residuals/jacobians
     ceres::Problem::EvaluateOptions evaluateOptions;
@@ -271,6 +316,9 @@ int main(int /*argc*/, char** argv)
 //    {
 //
 //    }
+
+    std::cerr << "Press space to finish" << std::endl;
+    pViewer->MaybeYieldToViewer();
 
 	return 0;
 }

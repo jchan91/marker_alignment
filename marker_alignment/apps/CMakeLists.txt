@@ -26,6 +26,8 @@ ADD_EXECUTABLE(marker_alignment
   MarkerAlignmentProblem.h
   visualization/Viewer3D.h
   visualization/Viewer3D.cpp
+  visualization/ViewerColors.h
+  visualization/ViewerButton.h
   main.cpp
 )
 
@@ -35,8 +37,5 @@ TARGET_LINK_LIBRARIES(marker_alignment
   ${CERES_LIBRARIES} 
   ${OpenCV_LIBS} 
   ${Boost_LIBRARIES} 
-  ${PCL_LIBRARIES}
-  ${PCL_COMMON_LIBRARIES} 
-  ${PCL_IO_LIBRARIES}
   ${VTK_LIBRARIES}
 )
