@@ -1,4 +1,5 @@
-#pragma once
+#ifndef VIEWERCOLORS_H_
+#define VIEWERCOLORS_H_
 
 namespace G2D
 {
@@ -16,5 +17,6 @@ namespace G2D
         static constexpr ViewerColor Tomato = { 255, 99, 71 };
         static constexpr ViewerColor Red = { 255, 0, 0 };
     };
-
 }
+
+#endif

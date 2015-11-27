@@ -1,4 +1,4 @@
-#include "Viewer3D.h"
+#include "visualization/Viewer3D.h"
 
 // For Colored points
 #include <vtkInteractorStyleTrackballCamera.h>

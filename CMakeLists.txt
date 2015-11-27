@@ -163,27 +163,13 @@ FIND_PACKAGE(Ceres REQUIRED)
 # For general CV stuff
 FIND_PACKAGE(OpenCV REQUIRED)
 
-# For VTK to help visualize stuff
-find_package(VTK REQUIRED)
-include(${VTK_USE_FILE})
-
 # Boost for lots of nice stuff
 find_package(Boost 1.36.0 REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
-# For VTK to help visualize stuff
-find_package(VTK REQUIRED)
+# # For VTK to help visualize stuff
+find_package(VTK 6.2 REQUIRED)
 include(${VTK_USE_FILE})
-
-# Boost for lots of nice stuff
-find_package(Boost 1.36.0 REQUIRED)
-include_directories(${Boost_INCLUDE_DIRS})
-
-# shall we build the core apps using the library
-SET(MARKER_ALIGNMENT_BUILD_APPS ON CACHE BOOL "Build MARKER_ALIGNMENT apps")
-IF(MARKER_ALIGNMENT_BUILD_APPS)
-  MESSAGE(STATUS "Compiling MARKER_ALIGNMENT apps")
-ENDIF(MARKER_ALIGNMENT_BUILD_APPS)
 
 include(CMakeDependentOption)
 CMAKE_DEPENDENT_OPTION(MARKER_ALIGNMENT_BUILD_LINKED_APPS "Build apps linked with the libraries (no plugin system)" OFF

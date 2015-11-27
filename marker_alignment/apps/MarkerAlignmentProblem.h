@@ -18,11 +18,11 @@
 #include "ceres/ceres.h"
 #include "ceres/rotation.h"
 
-#include "se3quat.h"
+#include "MathHelper/se3quat.h"
 #include "CameraIntrinsics.h"
 #include "MockData.h"
 
-#include "Viewer3D.h"
+#include "visualization/Viewer3D.h"
 
 #ifndef DEBUG
 #define DEBUG 1

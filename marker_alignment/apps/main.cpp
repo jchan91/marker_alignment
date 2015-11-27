@@ -26,14 +26,14 @@
 
 #include <opencv2/opencv.hpp>
 
-#include "se3quat.h"
+#include "MathHelper/se3quat.h"
 #include "CameraIntrinsics.h"
 #include "MockData.h"
 #include "MarkerAlignmentProblem.h"
-#include "math_constants.h"
+#include "MathHelper/math_constants.h"
 
 // Visualization
-#include "Viewer3D.h"
+#include "visualization/Viewer3D.h"
 
 using namespace G2D;
 using namespace std;

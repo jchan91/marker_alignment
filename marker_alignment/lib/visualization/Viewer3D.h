@@ -1,6 +1,7 @@
-#pragma once
+#ifndef VIEWER3D_H_
+#define VIEWER3D_H_
 
-#include "ViewerColors.h"
+#include "visualization/ViewerColors.h"
 
 #include <vector>
 #include <memory>
@@ -12,18 +13,21 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-#include <vtkPolyDataMapper.h>
 #include <vtkActor.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderer.h>
 #include <vtkRenderWindowInteractor.h>
 #include <vtkSmartPointer.h>
 #include <vtkPoints.h>
+#include <vtkPolyDataAlgorithm.h>
+#include <vtkDataSetMapper.h>
 #include <vtkVertexGlyphFilter.h>
 
 #include <vtkPyramid.h>
 #include <vtkUnstructuredGrid.h>
 #include <vtkDataSetMapper.h>
+
+#include <vtkPolyDataMapper.h>
 
 namespace G2D
 {
@@ -160,3 +164,5 @@ namespace G2D
         ::vtkSmartPointer<::vtkActor> m_pFrustums_actor;
     };
 }
+
+#endif

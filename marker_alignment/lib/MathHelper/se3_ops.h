@@ -39,7 +39,7 @@ namespace G2D {
   inline Eigen::Vector3d unproject(const Eigen::Vector2d&);
   inline Eigen::Vector4d unproject(const Eigen::Vector3d&);
 
-  #include "se3_ops.hpp"
+  #include "MathHelper/se3_ops.hpp"
 
 }
 

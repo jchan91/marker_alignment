@@ -27,7 +27,7 @@
 #ifndef SE3QUAT_H_
 #define SE3QUAT_H_
 
-#include "se3_ops.h"
+#include "MathHelper/se3_ops.h"
 
 #include <Eigen/Core>
 #include <Eigen/Geometry>

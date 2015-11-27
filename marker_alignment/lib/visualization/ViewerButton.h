@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Viewer3D.h>
-#include <ViewerColors.h>
+#include <visualization/Viewer3D.h>
+#include <visualization/ViewerColors.h>
 
 #include <vtkImageData.h>
 #include <vtkButtonWidget.h>
