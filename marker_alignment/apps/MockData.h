@@ -161,9 +161,9 @@ namespace G2D
         void Solution(SE3Quat &lidar2rig)
         {
             // TODO: Un-hard code the solution generation?
-            double degrees = 0.0;
+            double degrees = 1.0;
             double angle = degrees * PI / 180;
-            Eigen::Vector3d translation(0.0, 0.0, 1.0);
+            Eigen::Vector3d translation(0.0, 0.0, 0.0);
             Eigen::Quaterniond q(Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitY()));
 
             lidar2rig.setRotation(q);

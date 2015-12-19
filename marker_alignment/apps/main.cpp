@@ -181,12 +181,15 @@ int main(int /*argc*/, char** argv)
     solution_r[2] = 0.0; // z
     solution_r[3] = 1.0; // w
 
+    solution_t[0] = solution_t[1] = solution_t[2] = 0.0;
+
     // Render the initial guess
-    std::cerr << "Rendering initial guess" << std::endl;
+    printf("Rendering inital guess. %d Poses\n", (int)poses.size());
     for (size_t i = 0; i < poses.size(); i++)
     {
         SE3Quat currentSolution(Eigen::Quaterniond(solution_r), solution_t);
         SE3Quat xformedPose = currentSolution * (*poses[i].pose);
+
         pViewer->AddFrustum(xformedPose.rotation(), xformedPose.translation());
     }
     pViewer->MaybeYieldToViewer();
@@ -260,8 +263,6 @@ int main(int /*argc*/, char** argv)
 
     std::cout << summary.message << "\n";
     std::cout << summary.FullReport() << "\n";
-//    std::cout << "x : " << initial_x
-//            << " -> " << x << "\n";
 
 #ifdef DEBUG
     double solution_r_d[4];
